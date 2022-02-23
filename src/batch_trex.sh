@@ -43,8 +43,8 @@ for d in $dir_list; do
             # But in practice you're grabbing zip archives
             rclone copy laskolab:pivideos/$d$s/$s.zip $working_dir/current.zip 
             echo ".zip archive copied!"
-            
-            mkdir $working_dir/current
+
+            mkdir -p $working_dir/current
 
             unzip $working_dir/current.zip -d $working_dir/current
 
@@ -150,4 +150,5 @@ done
 
 ## TODO:
 # Update python code to prevent bad crops
+## Check check check check
 source deactivate
