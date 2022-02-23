@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ## Find the name, regardless of the pi.
-pi_name=$(HOSTNAME: -4)
+pi_name=${HOSTNAME: -4}
 if [[ $pi_name == "rypi" ]]; then
     pi_name='pi01'
 fi
