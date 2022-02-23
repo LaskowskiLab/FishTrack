@@ -15,15 +15,15 @@ export PATH="/home/ammon/anaconda3/bin:$PATH"
 source activate tracking
 
 ### Get all the pis file list (filtered to include only names with "pi" in them)
-dir_list=$(rclone lsf laskolab:pivideos.tmp --dirs-only | grep pi)
+dir_list=$(rclone lsf laskolab:pivideos --dirs-only | grep pi)
 
 
 ## Loop through each directory in the pivideos folder 
 for d in $dir_list; do
-    subdir_list=$(rclone lsf laskolab:pivideos.tmp/$d --dirs-only | grep batch.trex)
+    subdir_list=$(rclone lsf laskolab:pivideos/$d --dirs-only | grep batch.trex)
     for s in $subdir_list; do
         echo "Working on $s"
-        file_list=$(rclone lsf laskolab:pivideos.tmp/pi04/$s)
+        file_list=$(rclone lsf laskolab:pivideos/$d$s) ##Check that this shouldn't be $d/$s
         #echo $file_list
         if [[ "$file_list" == *"flag."* ]]; then
             echo "Flag found, moving on"
@@ -33,27 +33,38 @@ for d in $dir_list; do
             touch $working_dir/flag.working.txt
             hostname >> $working_dir/flag.working.txt
             date >> $working_dir/flag.working.txt
-            rclone copy $working_dir/flag.working.txt laskolab:pivideos.tmp/$d$s
-            rclone mkdir laskolab:pivideos.tmp/$d$s"output"
+            rclone copy $working_dir/flag.working.txt laskolab:pivideos/$d$s
+            rclone mkdir laskolab:pivideos/$d$s"output"
             echo "Territory marked."
 
 ## Copy images from remote
-            rclone copy laskolab:pivideos.tmp/$d$s $working_dir --include "*.jpg"
-            echo "Images copied!"
+            #rclone copy laskolab:pivideos/$d$s $working_dir --include "*.jpg" ## Use this if you're taking all the images
+
+            # But in practice you're grabbing zip archives
+            rclone copy laskolab:pivideos/$d$s/$s.zip $working_dir/current.zip 
+            echo ".zip archive copied!"
+            
+            mkdir $working_dir/current
+
+            unzip $working_dir/current.zip -d $working_dir/current
+
 ## Make the video from the images
             video_path=$working_dir/${d%/}.${s%/}.mp4
-            ffmpeg -f image2 -r 60 -i $working_dir/image%*.jpg -c:v copy $video_path
+            
+## Choose whether you want full quailty or compression (or both if you're feeling randy.)
+            #ffmpeg -f image2 -r 60 -i $working_dir/current/image%*.jpg -c:v copy $video_path
+            ffmpeg -f image2 -r 60 -i $working_dir/current/image%*.jpg -vcodec libx265 -crf 28 $video_path
 
 ## Make the output directory on remote and copy video to there
             if test -f "$video_path"; then
                 echo 'Video made, copying to remote'
-                rclone copy $video_path laskolab:pivideos.tmp/$d$s"output"
+                rclone copy $video_path laskolab:pivideos/$d$s
             else
                 echo "Video failed. I'll just make a note here and move on..."
                 date >> $working_dir/flag.working.txt
                 echo "FFMPEG Failed" >> $working_dir/flag.working.txt
-                rclone copy $working_dir/flag.working.txt laskolab:pivideos.tmp/$d$s
-                rclone moveto laskolab:pivideos.tmp/$d$s'flag.working.txt' laskolab:pivideos.tmp/$d$s'flag.check.txt'
+                rclone copy $working_dir/flag.working.txt laskolab:pivideos/$d$s
+                rclone moveto laskolab:pivideos/$d$s'flag.working.txt' laskolab:pivideos/$d$s'flag.check.txt'
                 break
             fi
 ## Crop the video based on markers
@@ -67,8 +78,8 @@ for d in $dir_list; do
                 echo "Cropping failed. I'll just make a note here and move on..."
                 date >> $working_dir/flag.working.txt
                 echo "CROP Failed" >> $working_dir/flag.working.txt
-                rclone copy $working_dir/flag.working.txt laskolab:pivideos.tmp/$d$s
-                rclone moveto laskolab:pivideos.tmp/$d$s'flag.working.txt' laskolab:pivideos.tmp/$d$s'flag.check.txt'
+                rclone copy $working_dir/flag.working.txt laskolab:pivideos/$d$s
+                rclone moveto laskolab:pivideos/$d$s'flag.working.txt' laskolab:pivideos/$d$s'flag.check.txt'
                 break
             fi
 
@@ -86,8 +97,8 @@ for d in $dir_list; do
                 echo "Trex or Tgrabs failed. I'll just make a note here and move on..."
                 date >> $working_dir/flag.working.txt
                 echo "TREX Failed" >> $working_dir/flag.working.txt
-                rclone copy $working_dir/flag.working.txt laskolab:pivideos.tmp/$d$s
-                rclone moveto laskolab:pivideos.tmp/$d$s'flag.working.txt' laskolab:pivideos.tmp/$d$s'flag.check.txt'
+                rclone copy $working_dir/flag.working.txt laskolab:pivideos/$d$s
+                rclone moveto laskolab:pivideos/$d$s'flag.working.txt' laskolab:pivideos/$d$s'flag.check.txt'
                 break
             fi
 ## Correct the IDs (to make sure a consistent top to bottom naming convention)
@@ -97,7 +108,7 @@ for d in $dir_list; do
                 infile=$f
                 outfile=${f%.npz}'.csv'
                 python parse-trex.py -i $infile -o $outfile -m
-                rclone copy $outfile laskolab:pivideos.tmp/$d$d"output/"
+                rclone copy $outfile laskolab:pivideos/$d$d"output/"
             done
 ## Check that output parsed correctly
             if test -f "$outfile"; then
@@ -106,18 +117,18 @@ for d in $dir_list; do
                 echo "Parsing failed, could be due to Trex. I'll just make a note here and move on..."
                 echo "PARSE Failed" >> $working_dir/flag.working.txt
                 date >> $working_dir/flag.working.txt
-                rclone copy $working_dir/flag.working.txt laskolab:pivideos.tmp/$d$s
-                rclone moveto laskolab:pivideos.tmp/$d$s'flag.working.txt' laskolab:pivideos.tmp/$d$s'flag.check.txt'
+                rclone copy $working_dir/flag.working.txt laskolab:pivideos/$d$s
+                rclone moveto laskolab:pivideos/$d$s'flag.working.txt' laskolab:pivideos/$d$s'flag.check.txt'
                 break
             fi
 
 ## Upload output to box (including changing working > finished)
-            rclone mkdir laskolab:pivideos.tmp/$d$s"output/raw"
-            rclone copy $working_dir/raw laskolab:pivideos.tmp/$d$s"output/raw"
+            rclone mkdir laskolab:pivideos/$d$s"output/raw"
+            rclone copy $working_dir/raw laskolab:pivideos/$d$s"output/raw"
 
             date >> $working_dir/flag.working.txt
-            rclone copy $working_dir/flag.working.txt laskolab:pivideos.tmp/$d$s
-            rclone moveto laskolab:pivideos.tmp/$d$s'flag.working.txt' laskolab:pivideos.tmp/$d$s'flag.complete.txt'
+            rclone copy $working_dir/flag.working.txt laskolab:pivideos/$d$s
+            rclone moveto laskolab:pivideos/$d$s'flag.working.txt' laskolab:pivideos/$d$s'flag.complete.txt'
 
             echo "deleting everything and moving on"
             rm $working_dir/raw/data/* ##I know rm -r would do this
@@ -134,7 +145,7 @@ for d in $dir_list; do
     fi
 ## Upload log of what you did
     log_name=$(date '+%Y.%m.%d')'-'$(hostname)'-log.txt'
-    rclone copy $working_dir/log.txt laskolab:pivideos.tmp/batch_logs/log_name
+    rclone copy $working_dir/log.txt laskolab:pivideos/batch_logs/log_name
 done
 
 ## TODO:
