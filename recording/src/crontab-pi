@@ -1,0 +1,13 @@
+# Edit this file to introduce tasks to be run by cron.
+# For more information see the manual pages of crontab(5) and cron(8)
+
+# m h  dom mon dow   command
+
+# This runs run_cam.sh every day at 6am (run_cam.sh runs for 12 hours)
+0 6 * * * bash /home/pi/recording/src/run_cam.sh
+
+# Combines videos into a .zip archive
+0 19 * * * bash /home/pi/recording/src/zip_today.sh
+
+# copies the zips using rclone (needs to be a script to get the filename)
+0 20 * * * bash /home/pi/recording/src/sync_zips.sh
