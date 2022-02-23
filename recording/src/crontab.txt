@@ -3,7 +3,8 @@
 
 # m h  dom mon dow   command
 
-# This syncs the pi with Box every evening at 7pm.
+# This syncs the pi with Box every evening at 7pm.                 ||
+#  Be sure to update the specified piID!!                          vv
 0 19 * * * rclone sync "/home/pi/recording" "AmazonBox:/pivideos/pi18”
 
 # This runs run_cam.sh every day at 6am (run_cam.sh runs for 12 hours)
