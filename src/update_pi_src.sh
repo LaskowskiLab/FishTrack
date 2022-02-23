@@ -1,6 +1,7 @@
 for i in $(cat $1); do
 ssh $i << EOF
-    rclone copy AmazonLab:/src/ ~/recording/src/
+    rclone copy AmazonBox:/src/ ~/recording/src/
+    crontab ~/recording/src/crontab-pi.txt
     exit
 EOF
 
