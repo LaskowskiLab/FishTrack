@@ -19,7 +19,7 @@ date_stamp=$(date "+%Y.%m.%d")
 ## Be sure to check the parent directory exists
 
 ## Use the batch.trex. tag if you want to have this batch processed
-directory_path=/home/pi/recording/batch.trex.$date_stamp/ 
+directory_path=/home/pi/recording/$date_stamp.batch.trex/ 
 
 #directory_path=/home/pi/recording/$date_stamp/ 
 
