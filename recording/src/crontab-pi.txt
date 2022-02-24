@@ -4,10 +4,10 @@
 # m h  dom mon dow   command
 
 # This runs run_cam.sh every day at 6am (run_cam.sh runs for 12 hours)
-0 6 * * * bash /home/pi/recording/src/run_cam.sh
+0 6 * * * bash /home/pi/recording/src/run_cam.sh >> /home/pi/recording/cronlog.log 2>&1
 
 # Combines videos into a .zip archive
-0 19 * * * bash /home/pi/recording/src/zip_today.sh
+0 19 * * * bash /home/pi/recording/src/zip_today.sh >> /home/pi/recording/cronlog.log 2>&1
 
 # copies the zips using rclone (needs to be a script to get the filename)
-0 20 * * * bash /home/pi/recording/src/sync_zips.sh
+0 20 * * * bash /home/pi/recording/src/sync_zips.sh >> /home/pi/recording/cronlog.log 2>&1
