@@ -19,4 +19,4 @@ directory_path=/home/pi/recording/$date_stamp.batch.trex/
 
 # Again, use the batch.trex. tag if you want this to be grabbed during batch processing
 cd $directory_path
-zip ../$date_stamp.batch.trex.zip *
+zip ./$date_stamp.batch.trex.zip *
