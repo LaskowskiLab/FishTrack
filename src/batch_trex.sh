@@ -63,24 +63,34 @@ for d in $dir_list; do
 
 ## Make the video from the images
             video_path=$working_dir/${d%/}.${s%/}.mp4
+            dark_path=$working_dir/${d%/}.${s%/}_all.mp4
             
 ## Choose whether you want full quailty or compression (or both if you're feeling randy.)
             pi_id="${d::-1}"
             d_str="${s::8}"
             echo $pi_id.$d_str
             if [[ "$z" == *"2022.02.22"* ]] ; then
-                in_string=$working_dir/current/home/pi/recording/2022.02.22/$pi_id.$d_str%*.jpg
+                in_dir=$working_dir/current/home/pi/recording/2022.02.22/
+                in_string=$in_dir$pi_id.$d_str%*.jpg
                 echo $in_string
             else
-                in_string=$working_dir/current/$pi_id.$d_str%*.jpg
+                in_dir=$working_dir/current/
+                in_string=$in_dir$pi_id.$d_str%*.jpg
             fi
             #ffmpeg -f image2 -r 60 -i $working_dir/current/image%*.jpg -c:v copy $video_path
-            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -crf 28 $video_path
+            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -crf 28 $dark_path
+            ## Make a second video, this time deleting all the images before the lights are on:
+            ls $in_dir | while read file; do
+                f_strip=${file%.jpg}
+                [ "${f_strip: -6}" -gt 160000 ] && rm -v "$file"
+                [ "${f_strip: -6}" -lt 063000 ] && rm -v "$file"
+            done
 
+            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -crf 28 $video_path
 ## Make the output directory on remote and copy video to there
             if test -f "$video_path"; then
                 echo 'Video made, copying to remote'
-                rclone copy $video_path aperkes:pivideos/$d$s -P
+                rclone copy $dark_path aperkes:pivideos/$d$s -P
                 echo 'removing images (DEBUG)'
                 rm -r $working_dir/current
             else
