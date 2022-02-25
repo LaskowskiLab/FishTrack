@@ -4,6 +4,9 @@
 # Written by Ammon Perkes for use in the Laskowski Lab
 # Contact perkes.ammon@gmail.com for questions
 
+## This code requires as input an image, or a video. 
+## If video, it will work off the first frame, so if the first frame is black it will fail.
+
 
 import sys
 import cv2
@@ -11,19 +14,38 @@ import cv2
 import numpy as np
 import subprocess 
 
+import argparse
+
+def build_parse():
+    parser = argparse.ArgumentParser(description='Required and additional inputs')
+    parser.add_argument('--in_file','-i',required=True,help='Path to input img or video')
+    parser.add_argument('--out_file','-o',required=False,help='Path to output, if not specified, goes to in_file.crop.mp4')
+    parser.add_argument('--crop_list','-x',required=False,help='Optional crop dict to specify locations')
+    parser.add_argument('--force_dict','-m',action='store_true',help='If included, it will only use the specified dictionary. Requires id and crop_dict')
+    parser.add_argument('--id','-c',required=False,help='Camera id, required if using the crop dict')
+    return parser.parse_args()
+
+
+args = build_parse()
+in_file = args.in_file
+if args.force_dict:
+    if args.id == None:
+        raise Exception('Using Force dict, but you no ID included. Be sure to include the ID and the crop_dict')
+    if args.crop_list == None:
+        raise Exception('Using Force dict, but you no crop_dict included. Be sure to include the ID and the crop_dict')
+
 ## Read in video and grab the first frame: 
 
-in_file = sys.argv[1]
-cam_id = sys.argv[2]
-
 crop_dict = {}
-try:
-    with open("crop_dict.tsv") as f:
+if args.crop_list is not None:
+    #try:
+    with open(args.crop_list) as f:
         for line in f:
             k,vs = line.split()
             crop_dict[k] = [int(l) for l in vs.split(',')]
-except:
-    print('Loading crop dictionary failed, going to try my best')
+    #except:
+    #    print('Loading crop dictionary failed, going to try my best')
+
 #in_file = '/Users/Ammon/Downloads/IMG_5624.MOV'
 
 ## Things to handle; 
@@ -42,14 +64,15 @@ gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
 parameters =  cv2.aruco.DetectorParameters_create()
 corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-if MANUAL:
-    x,y,out_w,out_h = crop_dict[cam_id]
+if args.force_dict:
+    x,y,out_w,out_h = crop_dict[args.id]
 elif len(corners) <= 2:
-    if cam_id in crop_dict.keys():
+    print(crop_dict.keys())
+    if args.id in crop_dict.keys():
         print('Warning: crop tags could not be identified, checking for hard coded crop')
-        x,y,out_w,out_h = crop_dict[cam_id]
+        x,y,out_w,out_h = crop_dict[args.id]
     else:
-        raise Exception("Couldn't find tags or crops, check your camera and tag positioning")
+        raise Exception("Couldn't find tags or crops, check your camera and tag positioning, or include a dict.tsv with crop instructions")
 else:
 ## Find parameters for ffmpeg crop
     xs,ys = [],[]
@@ -91,6 +114,10 @@ else:
 
 ## Crop video
 print(out_w,out_h,x,y)
-out_file = in_file.replace('.','_crop.')
+if args.out_file is not None:
+    out_file = args.out_file
+else:
+    out_file = '.crop.'.join(in_file.rsplit('.',1)) ## sort of hacky line to replace .jpg with .crop.jpg without touching any preceding .'s 
+
 command = f'ffmpeg -i "{in_file}" -filter:v "crop={out_w}:{out_h}:{x}:{y}" "{out_file}"'
 subprocess.call(command, shell=True)
