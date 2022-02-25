@@ -9,5 +9,5 @@ if [[ $pi_name == "rypi" ]]; then
     pi_name='pi01'
 fi
 
-## Copy only the *.zip files in the recording directory (without checking sub directories)
-rclone copy /home/pi/recording --include "*.zip" --max-depth 2 AmazonBox:/pivideos/$pi_name
+## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
+rclone move /home/pi/recording --include "*.zip" --max-depth 2 AmazonBox:/pivideos/$pi_name
