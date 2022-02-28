@@ -1,1 +1,3 @@
 test*
+./src/send_mail.sh
+.git_ignore
