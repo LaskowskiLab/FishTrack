@@ -34,4 +34,4 @@ for i in $(ls /home/ammon/Documents/Scripts/FishTrack/recording/now); do
 done
 echo 'Times checked, all done. Have a nice day'
 
-bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "Test: Everything appears to be working"
+#bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "This has been a test of Chapirone"
