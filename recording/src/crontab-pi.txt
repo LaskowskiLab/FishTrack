@@ -6,6 +6,9 @@
 # This runs run_cam.sh every day at 6am (run_cam.sh runs for 12 hours)
 0 6 * * * bash /home/pi/recording/src/run_cam.sh >> /home/pi/recording/cronlog.log 2>&1
 
+## Just in case it's still running, for example if you start it late, this will keep it from recording all night
+01 18 * * * pkill raspistill
+
 # Combines videos into a .zip archive
 0 19 * * * bash /home/pi/recording/src/zip_today.sh >> /home/pi/recording/cronlog.log 2>&1
 
