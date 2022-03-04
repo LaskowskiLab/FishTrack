@@ -35,8 +35,8 @@ for d in $dir_list; do
         echo $file_list
         if [[ "$file_list" == *"flag."* ]]; then
             echo "Flag found, moving on"
-        elif [[ "$file_list" == *".mp4" ]]; then
-            echo "Video found, skipping for now"
+        #elif [[ "$file_list" == *".mp4" ]]; then
+        #    echo "Video found, skipping for now"
 
         else #copy all images
 ## Make the working file
@@ -80,7 +80,7 @@ for d in $dir_list; do
                 in_string=$in_dir$pi_id.$d_str%*.jpg
             fi
             #ffmpeg -f image2 -r 60 -i $working_dir/current/image%*.jpg -c:v copy $video_path
-            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -pix_fmt yuv420p -crf 23 $dark_path
+            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -pix_fmt yuv420p -crf 17 $dark_path -y
             ## Make a second video, this time deleting all the images before the lights are on:
             echo "Deleting dark times"
             ls $in_dir | while read file; do
@@ -90,9 +90,9 @@ for d in $dir_list; do
                 [ "${f_strip: -6}" -lt 063000 ] && rm "$in_dir$file"
             done
 
-            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -pix_fmt yuv420p -crf 23 $video_path
+            ffmpeg -f image2 -r 60 -i $in_string -vcodec libx264 -pix_fmt yuv420p -crf 17 $video_path -y
 ## Make the output directory on remote and copy video to there
-            if test -f "$video_path"; then
+            if test -f "$dark_path"; then
                 echo 'Video made, copying to remote'
                 rclone copy $dark_path aperkes:pivideos/$d$s -P
                 echo 'removing images (DEBUG)'
@@ -117,13 +117,20 @@ for d in $dir_list; do
             #cp $video_path ${video_path%.mp4}'_crop.mp4'
 ## If this fails, should we just run on the uncropped video or quit? 
             if [ "$DEBUG" = true ] ; then
-                if test -f "${video_path%.mp4}'_crop.mp4'"; then
+                crop_path=${video_path%.mp4}'.crop.mp4'
+                if test -f "$crop_path"; then
                     echo 'Video cropped, updating path'
-                    video_path=${video_path%.mp4}'_crop.mp4'
+                    video_path=$crop_path
                 else
                     echo "Cropping Failed or something, check on this"
                 fi
                 echo "Continuing..."
+                if test -f "$video_path"; then
+                    echo 'Video made, copying to remote'
+                    rclone copy $video_path aperkes:pivideos/$d$s -P
+                else
+                    echo 'cropping failed or something' 
+                fi
                 continue
             fi
             if test -f "${video_path%.mp4}'_crop.mp4'"; then
