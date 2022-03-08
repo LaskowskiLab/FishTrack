@@ -15,6 +15,8 @@
 # copies the zips using rclone (needs to be a script to get the filename), also deletes .zip
 0 20 * * * bash /home/pi/recording/src/sync_zips.sh >> /home/pi/recording/cronlog.log 2>&1
 
-# Deletes any files older than 6 days (syntax is weird, idk)
-0 21 * * * find /home/pi/recording -name *.jpg -mtime +5 -exec rm {} \;
+# Deletes any files older than 5 days (syntax is weird, idk)
+0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
 0 22 * * * find /home/pi/recording -empty -type d -delete
+
+## Hourly, upload the cronlog to the box so you can look at it
