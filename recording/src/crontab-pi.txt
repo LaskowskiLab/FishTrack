@@ -4,19 +4,18 @@
 # m h  dom mon dow   command
 
 # This runs run_cam.sh every day at 6am (run_cam.sh runs for 12 hours)
-0 6 * * * bash /home/pi/recording/src/run_cam.sh >> /home/pi/recording/cronlog.log 2>&1
+#0 6 * * * bash /home/pi/recording/src/run_cam.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ## Just in case it's still running, for example if you start it late, this will keep it from recording all night
-01 18 * * * pkill raspistill
+#01 18 * * * pkill raspistill
 
 # Combines videos into a .zip archive
-0 19 * * * bash /home/pi/recording/src/zip_today.sh >> /home/pi/recording/cronlog.log 2>&1
+#0 19 * * * bash /home/pi/recording/src/zip_today.sh >> /home/pi/recording/cronlog.log 2>&1
 
 # copies the zips using rclone (needs to be a script to get the filename), also deletes .zip
-0 20 * * * bash /home/pi/recording/src/sync_zips.sh >> /home/pi/recording/cronlog.log 2>&1
+#0 20 * * * bash /home/pi/recording/src/sync_zips.sh >> /home/pi/recording/cronlog.log 2>&1
 
 # Deletes any files older than 5 days (syntax is weird, idk)
 0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
 0 22 * * * find /home/pi/recording -empty -type d -delete
 
-## Hourly, upload the cronlog to the box so you can look at it
