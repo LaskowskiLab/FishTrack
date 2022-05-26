@@ -1,9 +1,14 @@
 for i in $(cat $1); do
+
+echo $i
 ssh $i << EOF
-    sudo apt install zip
-    cd ~/recording/2022.02.22
-    zip -r ../2022.02.22.zip * 
+    echo $HOSTNAME
+    passwd
+    Pformosa
+    Arethereanyclones4me?
+    Arethereanyclones4me?
     exit
 EOF
+echo 'End ' $i
 
 done

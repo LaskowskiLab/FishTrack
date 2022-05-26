@@ -1,6 +1,6 @@
 for i in $(cat $1); do
 ssh $i << EOF
-    sudo shutdown
+    shutdown
     exit
 EOF
 
