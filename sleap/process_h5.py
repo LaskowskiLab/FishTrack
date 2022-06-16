@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from tqdm import tqdm 
+import argparse
 
 from matplotlib import pyplot as plt
 
@@ -24,7 +25,19 @@ def get_quadrant(xy_point,center_point = CENTER):
             f_loc = 3
     return f_loc
 
-with h5py.File(sys.argv[1], 'r') as f:
+def build_parse():
+    parser = argparse.ArgumentParser(description='Required and additional inputs')
+    parser.add_argument('--in_file','-i',required=True,help='Path to input .h5 file, output from SLEAP')
+    parser.add_argument('--out_file','-o',required=False,help='Path to output, if not specified, just uses existing filename')
+    parser.add_argument('--center_list','-x',required=False,help='Optional center_dict to define central point')
+    parser.add_argument('--id','-c',required=False,help='Camera id, required if using the defined center points')
+    parser.add_argument('--n_fish','-n',required=False,help='Number of fish, defaults to 4')
+    parser.add_argument('--quadrants','-q',required=False,help='List of quadrants (left to right, top down) where fish are, i.e. [0,1,3]')
+    return parser.parse_args()
+
+args = build_parse()
+
+with h5py.File(args.in_file, 'r') as f:
     dset_names = list(f.keys())
     locations = f['tracks'][:].T
     node_names = [n.decode() for n in f["node_names"][:]]
@@ -35,12 +48,31 @@ print(dset_names)
 print(node_names)
 print(locations.shape)
 
-n_fish = 4
-center_point = CENTER
+if args.n_fish == None:
+    n_fish = 4
+else:
+    n_fish = args.n_fish
+
+center_point = None
+if args.center_list == None or args.id == None:
+    print('no center point given, using default:',CENTER)
+    center_point = CENTER
+else:
+    crop_dict = {}
+    with open(args.center_list) as f:
+        for line in f:
+            k,cs = line.split()
+            if k == args.id:
+                center_point = [int(c) for c in cs.split(',')]
+                break
+if center_point is None:
+    print('could not find center point, using default')
+    center_point = CENTER
+
+print('using center point:',center_point)
 n_frames = len(locations)
 n_tracks = np.shape(locations)[3]
 n_nodes = len(node_names)
-
 
 ## Create an stacked array for all the tracks
 ## This can't be this big, it breaks.
@@ -62,7 +94,7 @@ for t in range(n_tracks):
         elif min_points[1] > center_point[1] and max_points[1] > center_point[1]: ## on the top half
             f_loc = 2
         else:
-            print('oops:',t,np.argmax(frames),min_points,max_points)
+            #print('oops:',t,np.argmax(frames),min_points,max_points)
             error_count += 1
             split_track=True
     elif min_points[0] > center_point[0] and max_points[0] > center_point[0]: ## on left side
@@ -71,17 +103,17 @@ for t in range(n_tracks):
         elif min_points[1] > center_point[1] and max_points[1] > center_point[1]: ## on the top half
             f_loc = 3
         else:
-            print('oops:',t,np.argmax(frames),min_points,max_points)
+            #print('oops:',t,np.argmax(frames),min_points,max_points)
             error_count += 1
             split_track=True
     else:
-        print('oops:',t,np.argmax(frames),min_points,max_points)
+        #print('oops:',t,np.argmax(frames),min_points,max_points)
         error_count += 1
         split_track=True
     if split_track:
-        print('track split: manually assigning points')
+        #print('track split: manually assigning points')
         for f in np.arange(n_frames)[frames]:
-            f_loc = get_quadrant(np.nanmean(locations[f,:,:,t],axis=0))
+            f_loc = get_quadrant(np.nanmean(locations[f,:,:,t],axis=0),center_point)
             cleaned_tracks[f_loc,f,:,:] = locations[f,:,:,t]
     else:
         cleaned_tracks[f_loc,frames,:,:] = locations[frames,:,:,t]
