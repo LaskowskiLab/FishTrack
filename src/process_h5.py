@@ -68,10 +68,6 @@ with h5py.File(args.in_file, 'r') as f:
     node_names = [n.decode() for n in f["node_names"][:]]
     track_occupancy = f['track_occupancy'][:].T
 
-print(track_occupancy.shape)
-print(dset_names)
-print(node_names)
-print(locations.shape)
 
 if args.n_fish == None:
     n_fish = 4
@@ -146,17 +142,15 @@ for t in range(n_tracks):
 
 ## Average all overlapping tracks (there shouldn't be many)
 ## This should get it by fish
-print('averaging tracks')
-print('this could take a minute:',cleaned_tracks.shape)
+#print('averaging tracks')
+#print('this could take a minute:',cleaned_tracks.shape)
 #averaged_tracks = np.nanmean(cleaned_tracks,axis=4)
 
 #print(averaged_tracks.shape)
-print('xs:',np.nanmean(cleaned_tracks[:,:,:,0],axis=(1,2)))
-print('ys:',np.nanmean(cleaned_tracks[:,:,:,1],axis=(1,2)))
 
 fig,ax = plt.subplots()
 
-print('error count:',error_count)
+print('error count:',error_count,'of',n_frames)
 visible_frames = np.zeros(n_fish)
 proportion_visible = np.zeros(n_fish)
 velocities = []
@@ -167,7 +161,6 @@ for f in range(n_fish):
     n_vis = np.sum(~np.isnan(cleaned_tracks[f,:,0,0]))
     visible_frames[f] = n_vis
     proportion_visible[f] = n_vis / n_frames
-    print(cleaned_tracks[f,:,0].shape)
     velocity = smooth_diff(cleaned_tracks[f,:,0])
     median_velocity = np.nanmedian(velocity)
     velocities.append(median_velocity)

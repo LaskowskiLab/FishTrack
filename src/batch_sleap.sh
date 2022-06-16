@@ -12,6 +12,7 @@ MINUTES=0 ## Resets MINUTES to 0, not that this is particularly important I don'
 t_end=${1-120} ## Sets end time to 2 hours (120 minutes) if no end time is specified
 
 crop_dict='/home/ammon/Documents/Scripts/FishTrack/src/crop_dict.22.02.25.tsv'
+center_dict='/home/ammon/Documents/Scripts/FishTrack/src/center_dict.22.02.25.tsv'
 
 ## the trex has to happen inside the trex environment, so I may as well just do that now
 export PATH="/home/ammon/anaconda3/bin:$PATH"
@@ -37,14 +38,14 @@ for d in $dir_list; do
         pi_id="${d::-1}"
         file_list=$(rclone lsf aperkes:pivideos/$d$s) ##Check that this shouldn't be $d/$s
         echo $file_list
-        if [[ "$file_list" == *"crop.mp4" ]]; then
+        if [[ "$file_list" == *"crop.mp4"* ]]; then
             echo "Video found, copying for sleap"
-            reclone copy aperkes: $working_dir include "/pivideos/"$d$s"*.crop.mp4"
+            rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.crop.mp4"
             video_path=$working_dir/
             video_path=$working_dir/${d%/}.${s%/}.crop.mp4
 
-        elif [[ "$file_list" == *"flag."* ]]; then
-            echo "Flag found, still going though..."
+        elif [[ "$file_list" == *"flag.complete"* ]]; then
+            echo "Comple flag found, but that doesn't mean much yet..."
 
         else #copy all data from the cloud
 ## Make the working file
@@ -158,12 +159,17 @@ for d in $dir_list; do
 ## At this point, I should have either copied or made a video, on to processing:
 ## Feed the video into SLEAP
         # Tracking
-        sleap-track -m $model_dir/finetuned352.centroid -m $model_dir/finetuned352.centered_instance --tracking.tracker flow --tracking.similarity iou $video_path 
-        # Convert to h5
-        sleap-convert $video_path.predictions.slp --format analysis -o $video_path.h5
-
+        if test -f "$video_path.h5"; then
+            echo "SLEAP Already ran, hope you like what it did"
+        else
+            echo "Tracking"
+            sleap-track -m $model_dir/finetuned352.centroid -m $model_dir/finetuned352.centered_instance --tracking.tracker flow --tracking.similarity iou $video_path 
+            # Convert to h5
+            echo "Converting to h5"
+            sleap-convert $video_path.predictions.slp --format analysis -o $video_path.h5
+        fi
 ## Check that SLEAP worked
-        if test -f "$working_dir/$video_path.h5"; then
+        if test -f "$video_path.h5"; then
             echo 'SLEAP output generated, moving on to parsing in python'
         else
             echo "SLEAP failed. I'll just make a note here and move on..."
@@ -174,12 +180,22 @@ for d in $dir_list; do
             break
         fi
 ## Parse the output from sleap
-        python process_h5.py -i $working_dir/$video_path.h5 -x $crop_dict -c $pi_id 
+        python process_h5.py -i $video_path.h5 -x $center_dict -c $pi_id 
 
 ## Parse the output (hopefully there are a reasonable number of fish...)
 ## Check that output parsed correctly
-        if test -f "$working_dir/$video_path"; then
+        if test -f "$video_path"; then
             echo 'Python parsing seems successful, time to upload'
+            rclone mkdir aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.csv aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.npy aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.png aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.txt aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.predictions.slp aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.h5 aperkes:pivideos/$d$s"output"
+            date >> $working_dir/flag.working.txt
+            rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
+            rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.complete.txt'
         else
             echo "Parsing failed, could be due to Trex. I'll just make a note here and move on..."
             echo "PARSE Failed" >> $working_dir/flag.working.txt
@@ -190,15 +206,7 @@ for d in $dir_list; do
         fi
 
 ## Upload output to box (including changing working > finished)
-        rclone mkdir aperkes:pivideos/$d$s"output"
-        rclone copy $working_dir/$video_path.h5 aperkes:pivideos/$d$d"output/"
-        rclone copy $working_dir/$video_path.predictions.slp aperkes:pivideos/$d$d"output/"
-        rclone copy $working_dir/$video_path.csv aperkes:pivideos/$d$d"output/"
-        rclone copy $working_dir/$video_path.npy aperkes:pivideos/$d$d"output/"
 
-        date >> $working_dir/flag.working.txt
-        rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
-        rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.complete.txt'
 
         echo "not deleting anything and moving on"
         #rm $working_dir/*
