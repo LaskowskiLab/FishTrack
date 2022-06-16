@@ -41,16 +41,20 @@ def build_parse():
 ## Input: Takes a track (1 fish, all nodes, all frames)
 ## Output: returns smooth velocity for that fish.
 def smooth_diff(track,win=25,poly=3):
-    track = track[~np.isnan(track[:,0])]
-    if len(track) < 25:
+    clean_track = track[~np.isnan(track[:,0])]
+    if len(clean_track) < 25:
         return 0
-    node_loc_vel = np.zeros_like(track)
+    node_loc_vel = np.zeros_like(clean_track)
+    simple_diff = np.diff(track,axis=0)
 ## Get velocities for each dimension
     for c in range(track.shape[-1]):
-        node_loc_vel[:,c] = savgol_filter(track[:,c],win,poly,deriv=1)
+        node_loc_vel[:,c] = savgol_filter(clean_track[:,c],win,poly,deriv=1)
 # Get normal velocity using all nodes
+
     node_vel = np.linalg.norm(node_loc_vel,axis=1) 
-    return node_vel
+## This simple velocity should probably be smoothed still, I don't love the way this works...
+    simple_vel = np.linalg.norm(simple_diff,axis=1)
+    return simple_vel
 
 args = build_parse()
 
