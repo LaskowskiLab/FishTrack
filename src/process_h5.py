@@ -189,6 +189,11 @@ if not args.dump:
 
     np.save(out_file.replace('.csv','.npy'),cleaned_tracks)
 
+    with open(out_file.replace('.csv','.txt'),'w') as f:
+        f.write(':: STATS ::')
+        f.write('\nproportion visible: ' + str(np.round(proportion_visible,3)))
+        f.write('\nmean velocity: ' + str(np.round(velocities,3)))
+        f.write('\nproportion away from edge: ' + str(np.round(center_ratio,3)))
     columns = ['Frame','Fish','x','y']
     frame_list,fish_list,x_list,y_list = [],[],[],[]
     for f in range(n_fish):
