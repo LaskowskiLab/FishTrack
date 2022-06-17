@@ -9,7 +9,7 @@
 working_dir="/home/ammon/Documents/Scripts/FishTrack/working_dir" ## Directory where all temporary files will be made.
 model_dir="/home/ammon/Documents/Scripts/FishTrack/sleap/models"
 MINUTES=0 ## Resets MINUTES to 0, not that this is particularly important I don't think...
-t_end=${1-120} ## Sets end time to 2 hours (120 minutes) if no end time is specified
+t_end=${1-120} ## Sets end time to 2 hours (120 minutes) if no end time is specified. Use # for infinite running
 
 crop_dict='/home/ammon/Documents/Scripts/FishTrack/src/crop_dict.22.02.25.tsv'
 center_dict='/home/ammon/Documents/Scripts/FishTrack/src/center_dict.22.02.25.tsv'
@@ -18,7 +18,7 @@ center_dict='/home/ammon/Documents/Scripts/FishTrack/src/center_dict.22.02.25.ts
 export PATH="/home/ammon/anaconda3/bin:$PATH"
 source activate sleap
 
-DEBUG=true
+DEBUG=false
 ### Get all the pis file list (filtered to include only names with "pi" in them)
 dir_list=$(rclone lsf aperkes:pivideos --dirs-only | grep pi)
 
@@ -38,14 +38,15 @@ for d in $dir_list; do
         pi_id="${d::-1}"
         file_list=$(rclone lsf aperkes:pivideos/$d$s) ##Check that this shouldn't be $d/$s
         echo $file_list
-        if [[ "$file_list" == *"crop.mp4"* ]]; then
+        if [[ "$file_list" == *"flag.complete"* ]]; then
+            echo "Complete flag found, not entirely sure what that means, but moving on"
+            continue
+        elif [[ "$file_list" == *"crop.mp4"* ]]; then
             echo "Video found, copying for sleap"
             rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.crop.mp4"
             video_path=$working_dir/
             video_path=$working_dir/${d%/}.${s%/}.crop.mp4
 
-        elif [[ "$file_list" == *"flag.complete"* ]]; then
-            echo "Comple flag found, but that doesn't mean much yet..."
 
         else #copy all data from the cloud
 ## Make the working file
@@ -118,15 +119,21 @@ for d in $dir_list; do
                 break
             fi
             if [ "$DEBUG" = true ] ; then
-                echo "Trying to crop"
-                #continue
+                echo "DEBUG: Moving on"
+                continue
             fi
 ## Crop the video based on markers
+## Trustratingly, I Haven't been able to get aruco tags into cv2 without breaking the sleap environment. 
+            echo 'Environment shuffling so that my crop code works'
+            conda deactivate
+            conda activate tracking
             python ~/Documents/Scripts/FishTrack/src/crop_by_tags.py -i $video_path -x $crop_dict -c $pi_id
+            conda deactivate
+            conda activate sleap
             #cp $video_path ${video_path%.mp4}'_crop.mp4'
 ## If this fails, should we just run on the uncropped video or quit? 
+            crop_path=${video_path%.mp4}'.crop.mp4'
             if [ "$DEBUG" = true ] ; then
-                crop_path=${video_path%.mp4}'.crop.mp4'
                 if test -f "$crop_path"; then
                     echo 'Video cropped, updating path'
                     video_path=$crop_path
@@ -142,9 +149,10 @@ for d in $dir_list; do
                 fi
                 continue
             fi
-            if test -f "${video_path%.mp4}'.crop.mp4'"; then
-                echo 'Video cropped, updating path'
-                video_path=${video_path%.mp4}'.crop.mp4'
+            if test -f "$crop_path"; then
+                echo 'Video cropped, updating path,copying to remote'
+                video_path=$crop_path
+                rclone copy $video_path aperkes:pivideos/$d$s -P
             else
                 echo "Cropping failed. I'll just make a note here and move on..."
                 date >> $working_dir/flag.working.txt
@@ -163,14 +171,16 @@ for d in $dir_list; do
             echo "SLEAP Already ran, hope you like what it did"
         else
             echo "Tracking"
-            sleap-track -m $model_dir/finetuned352.centroid -m $model_dir/finetuned352.centered_instance --tracking.tracker flow --tracking.similarity iou $video_path 
+            sleap-track -m $model_dir/finetuned352.centroid -m $model_dir/finetuned352.centered_instance --peak_threshold 0.4 --tracking.tracker flow --tracking.similarity iou $video_path 
             # Convert to h5
             echo "Converting to h5"
             sleap-convert $video_path.predictions.slp --format analysis -o $video_path.h5
         fi
 ## Check that SLEAP worked
         if test -f "$video_path.h5"; then
-            echo 'SLEAP output generated, moving on to parsing in python'
+            echo 'SLEAP output generated, uploading to Box and parsing in python'
+            rclone copy $video_path.predictions.slp aperkes:pivideos/$d$s"output"
+            rclone copy $video_path.h5 aperkes:pivideos/$d$s"output"
         else
             echo "SLEAP failed. I'll just make a note here and move on..."
             date >> $working_dir/flag.working.txt
@@ -184,20 +194,18 @@ for d in $dir_list; do
 
 ## Parse the output (hopefully there are a reasonable number of fish...)
 ## Check that output parsed correctly
-        if test -f "$video_path"; then
+        if test -f "$video_path.csv"; then
             echo 'Python parsing seems successful, time to upload'
             rclone mkdir aperkes:pivideos/$d$s"output"
             rclone copy $video_path.csv aperkes:pivideos/$d$s"output"
             rclone copy $video_path.npy aperkes:pivideos/$d$s"output"
             rclone copy $video_path.png aperkes:pivideos/$d$s"output"
             rclone copy $video_path.txt aperkes:pivideos/$d$s"output"
-            rclone copy $video_path.predictions.slp aperkes:pivideos/$d$s"output"
-            rclone copy $video_path.h5 aperkes:pivideos/$d$s"output"
             date >> $working_dir/flag.working.txt
             rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
             rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.complete.txt'
         else
-            echo "Parsing failed, could be due to Trex. I'll just make a note here and move on..."
+            echo "Parsing failed, probably the .slp has too many tracks. I'll just make a note here and move on..."
             echo "PARSE Failed" >> $working_dir/flag.working.txt
             date >> $working_dir/flag.working.txt
             rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
@@ -210,12 +218,14 @@ for d in $dir_list; do
 
         echo "not deleting anything and moving on"
         #rm $working_dir/*
-    done
 ## Check if it's been running longer than the alotted time. If so quit. 
-    if (( MINUTES > t_end )); then
+    echo 'Time (minutes):'
+    echo $MINUTES
+    if (( MINUTES > $t_end )); then
         "Time's up, exiting."
-        break
+        break 2
     fi
+    done
 done
 
 ## Upload log of what you did
