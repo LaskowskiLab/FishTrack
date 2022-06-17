@@ -10,12 +10,12 @@ echo $timestamp
 export PATH="/home/ammon/anaconda3/bin:$PATH"
 source activate tracking
 
-while (( SECONDS < secs10 )); do
+while (( SECONDS < $secs10 )); do
     echo 'tick'
     echo $SECONDS
-    if (( SECONDS > $t_end )); then
+    if (( SECONDS > t_end )); then
+        echo 'Time is up'
         break
     fi
 done
 
-source deactivate
