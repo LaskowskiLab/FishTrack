@@ -98,7 +98,7 @@ else:
     max_dim = max([X,Y])
     min_dim = min([X,Y])
 
-    if len(corners) < 4 or len (corners > 4):
+    if len(corners) < 4 or len(corners) > 4:
         print('Got a different number of corners than expected, going to do my best though.')
 
 ## Check if the shape is weird, this generally happens when one of the tags are missing
@@ -119,5 +119,5 @@ if args.out_file is not None:
 else:
     out_file = '.crop.'.join(in_file.rsplit('.',1)) ## sort of hacky line to replace .jpg with .crop.jpg without touching any preceding .'s 
 
-command = f'ffmpeg -i "{in_file}" -filter:v "crop={out_w}:{out_h}:{x}:{y}" -c:v libx264 -crf 17 "{out_file}" -y'
+command = f'ffmpeg -i "{in_file}" -filter:v "crop={out_w}:{out_h}:{x}:{y}" -c:v libx264 -crf 15 "{out_file}" -y'
 subprocess.call(command, shell=True)
