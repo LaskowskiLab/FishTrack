@@ -11,6 +11,8 @@ from matplotlib import pyplot as plt
 
 CENTER = [175,203]
 
+## Code which takes .h5 files (output from SLEAP) and processes it to usable data
+
 def get_quadrant(xy_point,center_point = CENTER):
     x,y = xy_point
     x0,y0 = center_point

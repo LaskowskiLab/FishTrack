@@ -26,7 +26,13 @@ dir_list=$(rclone lsf aperkes:pivideos --dirs-only | grep pi)
 ## Loop through each directory in the pivideos folder 
 echo $dir_list
 for d in $dir_list; do
-    echo $d
+    if [ $# -gt 0 ] ; then
+        if [ "$d" != "$1/" ]; then
+        echo "Directory specified, skipping $d"
+            continue 
+        fi
+    fi
+    echo "running $d"
     subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only | grep batch.trex)
     echo $subdir_list
     if [ -z "$subdir_list" ]; then
@@ -41,16 +47,85 @@ for d in $dir_list; do
         if [[ "$file_list" == *"flag.complete"* ]]; then
             echo "Complete flag found, not entirely sure what that means, but moving on"
             continue
+        elif [[ "$file_list" == *"flag.check"* ]]; then
+            echo "Check flag found, skipping for now"
+            continue
         elif [[ "$file_list" == *"crop.mp4"* ]]; then
             echo "Video found, copying for sleap"
             rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.crop.mp4"
-            video_path=$working_dir/
             video_path=$working_dir/${d%/}.${s%/}.crop.mp4
+            #video_path=$working_dir/pivideos/"$d$s"${d%/}.${s%/}.crop.mp4
 
+
+        elif [[ "$file_list" == *".h264"* ]]; then ## Eventually I should streamline this, it's a lot of copy-pasta from below
+            echo "h264 found, copying for conversion to .mp4"
+            rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.h264" -P
+            h264_path=$working_dir/pivideos/"$d$s"${d%/}.${s%.batch.trex/}.h264
+            video_path=$working_dir/${d%/}.${s%/}.mp4
+
+            echo "$h264_path"
+            ffmpeg -i $h264_path -crf 13 $video_path
+            if test -f "$video_path"; then
+                echo 'Video made, copying to remote'
+                rclone copy $video_path aperkes:pivideos/$d$s -P
+            else
+                echo "Video failed. I'll just make a note here and move on..."
+                date >> $working_dir/flag.working.txt
+                echo "FFMPEG Failed" >> $working_dir/flag.working.txt
+                if [ "$DEBUG" = false ] ; then 
+                    rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
+                    rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.check.txt'
+                fi
+                continue
+            fi
+            if [ "$DEBUG" = true ] ; then
+                echo "DEBUG: Moving on"
+                continue
+            fi
+## Crop the video based on markers
+## Trustratingly, I Haven't been able to get aruco tags into cv2 without breaking the sleap environment. 
+            echo 'Environment shuffling so that my crop code works'
+            conda deactivate
+            conda activate tracking
+            python ~/Documents/Scripts/FishTrack/src/crop_by_tags.py -i $video_path -x $crop_dict -c $pi_id
+            conda deactivate
+            conda activate sleap
+            #cp $video_path ${video_path%.mp4}'_crop.mp4'
+## If this fails, should we just run on the uncropped video or quit? 
+            crop_path=${video_path%.mp4}'.crop.mp4'
+            if [ "$DEBUG" = true ] ; then
+                if test -f "$crop_path"; then
+                    echo 'Video cropped, keeping same path'
+                    video_path=$crop_path
+                else
+                    echo "Cropping Failed or something, check on this"
+                fi
+                echo "Continuing..."
+                if test -f "$video_path"; then
+                    echo 'Video made, copying to remote'
+                    rclone copy $video_path aperkes:pivideos/$d$s -P
+                else
+                    echo 'cropping failed or something' 
+                fi
+                continue
+            fi
+            if test -f "$crop_path"; then
+                echo 'Video cropped, updating path,copying to remote'
+                video_path=$crop_path
+                rclone copy $video_path aperkes:pivideos/$d$s -P
+            else
+                echo "Cropping failed. I'll just make a note here and move on..."
+                date >> $working_dir/flag.working.txt
+                echo "CROP Failed" >> $working_dir/flag.working.txt
+                rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
+                rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.check.txt'
+                break
+            fi
 
         else #copy all data from the cloud
 ## Make the working file
-            echo "No video yet. Here, I'll make one."
+            echo "No video yet. skipping for now"
+            continue
             touch $working_dir/flag.working.txt
             hostname >> $working_dir/flag.working.txt
             date >> $working_dir/flag.working.txt
@@ -167,6 +242,8 @@ for d in $dir_list; do
 ## At this point, I should have either copied or made a video, on to processing:
 ## Feed the video into SLEAP
         # Tracking
+        echo "Skipping sleap for now, need to retrain for babies"
+        continue
         if test -f "$video_path.h5"; then
             echo "SLEAP Already ran, hope you like what it did"
         else
@@ -187,7 +264,7 @@ for d in $dir_list; do
             echo "SLEAP Failed" >> $working_dir/flag.working.txt
             rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
             rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.check.txt'
-            break
+            continue
         fi
 ## Parse the output from sleap
         python process_h5.py -i $video_path.h5 -x $center_dict -c $pi_id 
@@ -231,7 +308,7 @@ done
 ## Upload log of what you did
 log_name=$(date '+%Y.%m.%d')'-'$(hostname)'-log.txt'
 echo $log_name
-#rclone copy $working_dir/log.txt aperkes:pivideos/batch_logs/log_name
+rclone copy $working_dir/log.txt aperkes:pivideos/batch_logs/log_name
 
 ## TODO:
 # Update python code to prevent bad crops
