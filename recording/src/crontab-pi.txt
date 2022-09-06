@@ -21,3 +21,5 @@
 #0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
 #0 22 * * * find /home/pi/recording -empty -type d -delete
 
+## Reboot once a week on sunday morning at 4am
+0 4 * * SUN reboot
