@@ -11,7 +11,7 @@ model_dir="/home/ammon/Documents/Scripts/FishTrack/sleap/models"
 MINUTES=0 ## Resets MINUTES to 0, not that this is particularly important I don't think...
 t_end=${1-120} ## Sets end time to 2 hours (120 minutes) if no end time is specified. Use # for infinite running
 
-crop_dict='/home/ammon/Documents/Scripts/FishTrack/src/crop_dict.22.02.25.tsv'
+crop_dict='/home/ammon/Documents/Scripts/FishTrack/src/crop_dict.22.09.01.tsv'
 center_dict='/home/ammon/Documents/Scripts/FishTrack/src/center_dict.22.02.25.tsv'
 
 ## the trex has to happen inside the trex environment, so I may as well just do that now
@@ -41,6 +41,7 @@ for d in $dir_list; do
     fi
     for s in $subdir_list; do
         echo "Working on $s"
+        echo "Working on $s" > $working_dir/flag.working.txt
         pi_id="${d::-1}"
         file_list=$(rclone lsf aperkes:pivideos/$d$s) ##Check that this shouldn't be $d/$s
         echo $file_list
@@ -48,15 +49,20 @@ for d in $dir_list; do
             echo "Complete flag found, not entirely sure what that means, but moving on"
             continue
         elif [[ "$file_list" == *"flag.check"* ]]; then
-            echo "Check flag found, skipping for now"
+            echo "Check flag found, going to do it"
+            rclone moveto aperkes:pivideos/$d$s'flag.check.txt' aperkes:pivideos/$d$s'flag.working.txt'
+            #continue
+        fi
+
+        if [[ "$file_list" == *"crop.mp4"* ]]; then
+            echo "cropped mp4 found, skipping for now"
             continue
-        elif [[ "$file_list" == *"crop.mp4"* ]]; then
-            echo "Video found, copying for sleap"
             rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.crop.mp4"
             video_path=$working_dir/${d%/}.${s%/}.crop.mp4
             #video_path=$working_dir/pivideos/"$d$s"${d%/}.${s%/}.crop.mp4
-
-
+        elif [[ "$file_list" == *"trex.mp4"* ]]; then
+            echo "found an uncropped mp4. What do I do?" 
+            echo " (Add some crop code here) "
         elif [[ "$file_list" == *".h264"* ]]; then ## Eventually I should streamline this, it's a lot of copy-pasta from below
             echo "h264 found, copying for conversion to .mp4"
             rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.h264" -P
@@ -64,7 +70,8 @@ for d in $dir_list; do
             video_path=$working_dir/${d%/}.${s%/}.mp4
 
             echo "$h264_path"
-            ffmpeg -i $h264_path -crf 13 $video_path
+            ffmpeg -i $h264_path -crf 13 $video_path -y
+            rm $h264_path
             if test -f "$video_path"; then
                 echo 'Video made, copying to remote'
                 rclone copy $video_path aperkes:pivideos/$d$s -P
@@ -87,6 +94,7 @@ for d in $dir_list; do
             echo 'Environment shuffling so that my crop code works'
             conda deactivate
             conda activate tracking
+            echo $video_path
             python ~/Documents/Scripts/FishTrack/src/crop_by_tags.py -i $video_path -x $crop_dict -c $pi_id
             conda deactivate
             conda activate sleap
@@ -95,7 +103,8 @@ for d in $dir_list; do
             crop_path=${video_path%.mp4}'.crop.mp4'
             if [ "$DEBUG" = true ] ; then
                 if test -f "$crop_path"; then
-                    echo 'Video cropped, keeping same path'
+                    echo 'Video cropped, updating path and deleting video'
+                    rm $video_path
                     video_path=$crop_path
                 else
                     echo "Cropping Failed or something, check on this"
@@ -112,14 +121,14 @@ for d in $dir_list; do
             if test -f "$crop_path"; then
                 echo 'Video cropped, updating path,copying to remote'
                 video_path=$crop_path
-                rclone copy $video_path aperkes:pivideos/$d$s -P
+                rclone move $video_path aperkes:pivideos/$d$s -P
             else
                 echo "Cropping failed. I'll just make a note here and move on..."
                 date >> $working_dir/flag.working.txt
                 echo "CROP Failed" >> $working_dir/flag.working.txt
                 rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
                 rclone moveto aperkes:pivideos/$d$s'flag.working.txt' aperkes:pivideos/$d$s'flag.check.txt'
-                break
+                continue
             fi
 
         else #copy all data from the cloud
@@ -243,6 +252,7 @@ for d in $dir_list; do
 ## Feed the video into SLEAP
         # Tracking
         echo "Skipping sleap for now, need to retrain for babies"
+        rm $video_path
         continue
         if test -f "$video_path.h5"; then
             echo "SLEAP Already ran, hope you like what it did"
@@ -300,7 +310,7 @@ for d in $dir_list; do
     echo $MINUTES
     if (( MINUTES > $t_end )); then
         "Time's up, exiting."
-        break 2
+        break
     fi
     done
 done
