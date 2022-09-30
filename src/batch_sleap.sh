@@ -120,10 +120,12 @@ for d in $dir_list; do
             fi
             if test -f "$crop_path"; then
                 echo 'Video cropped, updating path,copying to remote'
+                rm $video_path
                 video_path=$crop_path
                 rclone move $video_path aperkes:pivideos/$d$s -P
             else
                 echo "Cropping failed. I'll just make a note here and move on..."
+                rm $video_path
                 date >> $working_dir/flag.working.txt
                 echo "CROP Failed" >> $working_dir/flag.working.txt
                 rclone copy $working_dir/flag.working.txt aperkes:pivideos/$d$s
@@ -235,6 +237,7 @@ for d in $dir_list; do
             fi
             if test -f "$crop_path"; then
                 echo 'Video cropped, updating path,copying to remote'
+                rm $video_path
                 video_path=$crop_path
                 rclone copy $video_path aperkes:pivideos/$d$s -P
             else
@@ -315,10 +318,10 @@ for d in $dir_list; do
     done
 done
 
-## Upload log of what you did
-log_name=$(date '+%Y.%m.%d')'-'$(hostname)'-log.txt'
-echo $log_name
-rclone copy $working_dir/log.txt aperkes:pivideos/batch_logs/log_name
+## Upload log of what you did, Need to fix this.
+#log_name=$(date '+%Y.%m.%d')'-'$(hostname)'-log.txt'
+#echo $log_name
+#rclone copy $working_dir/log.txt aperkes:pivideos/batch_logs/$log_name
 
 ## TODO:
 # Update python code to prevent bad crops
