@@ -1,7 +1,7 @@
 #!/bin/sh
 
-n_hours = ${1-12}
-f_rate = ${2-1}
+n_hours=${1-12}
+f_rate=${2-1}
 
 ## Find the name, regardless of the pi.
 pi_name=${HOSTNAME: -4}
@@ -28,7 +28,7 @@ directory_path=/home/pi/recording/$date_stamp.batch.trex/
 #directory_path=/home/pi/recording/$date_stamp/ 
 
 ## Make directory for images
-echo $directory_path$pi_name.$year_stamp
+echo recording $directory_path$pi_name.$dt_stamp.h264
 
 # -p will fill in missing directories
 mkdir -p $directory_path 
