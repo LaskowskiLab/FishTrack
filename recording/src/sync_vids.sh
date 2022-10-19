@@ -10,4 +10,4 @@ if [[ $pi_name == "rypi" ]]; then
 fi
 
 ## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
-rclone move /home/pi/recording --include "*.h264" --max-depth 2 AmazonBox:/pivideos/$pi_name
+rclone move /home/pi/recording --include "*.h264" --max-depth 2 --transfers 1 AmazonBox:/pivideos/$pi_name
