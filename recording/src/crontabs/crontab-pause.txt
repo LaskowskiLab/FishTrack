@@ -1,0 +1,12 @@
+# Edit this file to introduce tasks to be run by cron.
+# For more information see the manual pages of crontab(5) and cron(8)
+
+# m h  dom mon dow   command
+
+## Upload video (this also deletes the video from the pi)
+0 20 * * * bash /home/pi/recording/src/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
+
+# Deletes any files older than 5 days (syntax is weird, idk)
+#0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
+#0 22 * * * find /home/pi/recording -empty -type d -delete
+
