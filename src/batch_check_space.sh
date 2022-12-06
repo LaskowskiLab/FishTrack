@@ -12,7 +12,7 @@ space="$(ssh -o "StrictHostKeyChecking=no" $i " df -hk /")"
 
 if [ -z "$space" ]; then
     echo "it's blank!"
-    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "Could not connect to $i"
+    #bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "Could not connect to $i"
     continue
     fi
 
@@ -43,5 +43,16 @@ else
 
 done
 
-bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "That's all, I checked $count pi's. Have a nice day!"
+bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "I checked $count pi's."
+
+dice=$(( 1 + $RANDOM % 10))
+
+if [ $dice -gt "8" ]; then 
+    joke="$(shuf -n 1 /home/ammon/Documents/Scripts/FishTrack/src/fish_jokes.txt)"
+
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "That's all! How about a joke before I go? $joke"
+else
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "That's all, have a nice day!"
+
+    fi
 
