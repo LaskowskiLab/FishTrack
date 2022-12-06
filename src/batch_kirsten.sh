@@ -88,7 +88,7 @@ for d in $dir_list; do
                 echo "$h264_path"
                 echo $video_path
 
-                ffmpeg -i $h264_path -crf 13 $video_path -y
+                ffmpeg -i $h264_path -c copy -crf 13 $video_path -y
                 rm $h264_path ## delete downloaded h264
                 if test -f "$video_path"; then
                     echo 'Video made, copying to remote'
