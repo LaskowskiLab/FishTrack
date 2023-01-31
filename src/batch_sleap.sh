@@ -70,7 +70,7 @@ for d in $dir_list; do
             video_path=$working_dir/${d%/}.${s%/}.mp4
 
             echo "$h264_path"
-            ffmpeg -i $h264_path -crf 13 $video_path -y
+            ffmpeg -i $h264_path -c copy -crf 13 $video_path -y
             rm $h264_path
             if test -f "$video_path"; then
                 echo 'Video made, copying to remote'
