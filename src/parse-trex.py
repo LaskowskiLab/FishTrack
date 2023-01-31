@@ -5,6 +5,7 @@
 
 import numpy as np
 import argparse
+from matplotlib import pyplot as plt
 
 ## Build argument parser
 def build_parse():
@@ -13,6 +14,8 @@ def build_parse():
     parser.add_argument('--output_file','-o',required=False,default=None,help='Path to output, if not specified, goes to the same place as input')
     parser.add_argument('--verbose','-v',required=False,action='store_true',help='use for printing information')
     parser.add_argument('--head','-m',required=False,action='store_true',help='Include header string of meta data')
+    parser.add_argument('--showplot','-p',required=False,action='store_true',help='Optionally visualize the plot')
+    parser.add_argument('--saveplot','-s',required=False,action='store_true',help='Optionally save the plot')
     return parser.parse_args()
 
 ## Parse the file string to get relevent info. Requires string to be parsed correctly
@@ -41,7 +44,12 @@ def get_stats(file_object):
     stat_dict['droppped_frames'] = np.sum(file_object['missing'])
     stat_dict['total_frames'] = len(file_object['missing'])
     return stat_dict
-        
+    
+def plot_array(pos_array):    
+    fig,ax = plt.subplots()
+    ax.scatter(pos_array[1],pos_array[2],alpha=.01,marker='.')
+    return fig,ax
+
 if __name__ == '__main__':
     args = build_parse()
     file_object = np.load(args.input_file)
@@ -76,3 +84,10 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
     np.savetxt(out_name,out_table,delimiter=',',header=head_string,fmt=['%d','%1.3f','%1.3f','%1.3f','%d'])
+
+    if args.showplot or args.saveplot:
+        fig,ax = plot_array(np.array([ts,xs,ys]))
+        if args.showplot:
+            plt.show()
+        if args.saveplot:
+            plt.savefig(out_name + '.png',dpi=300)
