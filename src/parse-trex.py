@@ -47,7 +47,9 @@ def get_stats(file_object):
     
 def plot_array(pos_array):    
     fig,ax = plt.subplots()
+    #pos_array[2] = np.nanmax(pos_array[2]) - np.array(pos_array[2])
     ax.scatter(pos_array[1],pos_array[2],alpha=.01,marker='.')
+    plt.gca().invert_yaxis()
     return fig,ax
 
 if __name__ == '__main__':
