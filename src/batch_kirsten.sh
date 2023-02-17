@@ -28,7 +28,7 @@ echo $dir_list
 for d in $dir_list; do
     if [ $# -gt 0 ] ; then
         if [ "$d" != "$1/" ]; then
-        echo "Directory specified, skipping $d"
+            echo "Directory specified, skipping $d"
             continue 
         fi
     fi
@@ -48,6 +48,13 @@ for d in $dir_list; do
         continue
     fi
     for s in $subdir_list; do
+
+        y="${s%%.*}" 
+        echo $y
+        if [ "$y" == '2022' ] ; then
+            echo "Skipping 2022: " $s
+            continue
+        fi
         echo "Working on $s"
         echo "Working on $s" > $working_dir/flag.working.txt
         pi_id="${d::-1}"
