@@ -46,8 +46,11 @@ done
 bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "I checked $count pi's."
 
 dice=$(( 1 + $RANDOM % 10))
+cyber_ip="$(hostname -I)"
+bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$cyber_ip"
 
-bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$dice"
+#bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$dice"
+
 if [ $dice -gt "8" ]; then 
     joke="$(shuf -n 1 /home/ammon/Documents/Scripts/FishTrack/src/fish_jokes.txt)"
 
