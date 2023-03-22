@@ -15,8 +15,9 @@ h5_name = vid_name.replace('.mp4','.analysis.h5')
 #file_object = np.load(h5_name)
 #out_file = '/home/ammon/Videos/babies/singles/pi13.2022.10.30.batch.trex.crop_3.tracked.mp4'
 out_file = vid_name.replace('.mp4','.tracked.mp4')
-VIDEO = False
+VIDEO = True
 PLOT = False
+FULL = False
 
 with h5py.File(h5_name, 'r') as f:
     dset_names = list(f.keys())
@@ -65,7 +66,8 @@ if False:
 
     plt.show()
 
-if True:
+## Plot heatmap overlay
+if False:
 # get colormap
     from matplotlib.colors import LinearSegmentedColormap
 
@@ -180,11 +182,11 @@ if VIDEO:
                 r = max(2,rad-l)
                 cv2.circle(frame,(a[t-l,0],a[t-l,1]),radius=r,color=fish_color, thickness=-1)
                 speed = str(vel[t]) + ' cm/s'
-                cv2.putText(frame,speed,(25,25),cv2.FONT_HERSHEY_SIMPLEX,1,(0,0,0),2)
+                cv2.putText(frame,speed,(225,25),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2)
             num = f'{t:05d}'
             img_name = path + 'Frame_'+ num + '.png'
             #print(img_name)
-            if t % 20 == 0:
+            if t % 20 == 0 or FULL:
                 cv2.imwrite(img_name,frame)
             t += 1
 
@@ -193,8 +195,8 @@ if VIDEO:
                 key = cv2.waitKey(1)
                 if key == ord('q'):
                     break
-            #if t > 3600:
-                #break
+            if t > (20*60) and FULL:
+                break
         else:
             break
 
@@ -202,7 +204,8 @@ if VIDEO:
     cv2.destroyAllWindows()
 
     if not PLOT:
-        command = f'ffmpeg -r 60 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
+        #command = f'ffmpeg -r 60 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
+        command = f'ffmpeg -r 20 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
 
         subprocess.call(command,shell=True)
 
