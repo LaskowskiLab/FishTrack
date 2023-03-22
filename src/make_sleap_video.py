@@ -204,8 +204,10 @@ if VIDEO:
     cv2.destroyAllWindows()
 
     if not PLOT:
-        #command = f'ffmpeg -r 60 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
-        command = f'ffmpeg -r 20 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
+        if FULL:
+            command = f'ffmpeg -r 60 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
+        else:
+            command = f'ffmpeg -r 20 -f image2 -i /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/Frame_%*.png -vcodec libx264 -crf 20 -pix_fmt yuv420p {out_file} -y'
 
         subprocess.call(command,shell=True)
 
