@@ -52,6 +52,26 @@ def plot_array(pos_array):
     plt.gca().invert_yaxis()
     return fig,ax
 
+def clear_lone_points(a):
+    a = np.array(a)
+    y = np.array(a[1:-1])
+    real_points = ~np.isinf(a)
+    real_points = real_points.astype(int)
+    lone_points = real_points[1:-1] + real_points[:-2] + real_points[2:] == 1
+    y[lone_points == 1] = np.inf 
+    #import pdb;pdb.set_trace()
+    a[1:-1] = y
+    return a
+
+def nan_helper(y):
+    return np.isinf(y), lambda z: z.nonzero()[0]
+
+def interp_track(a):
+    y = np.array(a)
+    nans,x = nan_helper(a)
+    y[nans]=np.interp(x(nans),x(~nans),y[~nans])
+    return y
+
 if __name__ == '__main__':
     args = build_parse()
     file_object = np.load(args.input_file)
