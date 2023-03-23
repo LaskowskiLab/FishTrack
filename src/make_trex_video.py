@@ -161,4 +161,7 @@ if VIDEO:
     print('Deleting imgs')
     command2 = f'rm /home/ammon/Documents/Scripts/FishTrack/working_dir/tmp/*.png'
     subprocess.call(command2,shell=True)
+
+### Reminder, for a gif, use something like this: ffmpeg -i '/home/ammon/Downloads/baby_tracking_demo4.mp4' -filter_complex "[0:v] palettegen" ~/Downloads/baby_palette.png; ffmpeg -i '/home/ammon/Downloads/baby_tracking_demo4.mp4' -r 6 -i ~/Downloads/baby_palette.png -filter_complex "[0:v] fps=10,scale=480:-1 [new];[new][1:v] paletteuse" ~/Downloads/babies_r6f10.gif
+
 print('Done-zo!')
