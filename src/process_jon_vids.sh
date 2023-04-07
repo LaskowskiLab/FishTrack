@@ -11,7 +11,8 @@
 fishtrack_path="/home/ammon/Documents/Scripts/FishTrack/"
 working_dir=$fishtrack_path"working_dir/"
 
-t_end=${2-#} ## Sets end time to be infinite by default, but you can specify
+# This hasn't been implemented yet
+#t_end=${2-#} ## Sets end time to be infinite by default, but you can specify
 
 v1_dir=$working_dir"day1_imgs/"
 vAll_dir=$working_dir"all_imgs/"
