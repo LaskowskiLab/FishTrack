@@ -3,7 +3,7 @@
 ## Code that will
 # 1. Iterate through Jon's remote images (JON01)
 # 2. Download all h264, one by one
-# 3. Save one image from each one (not the first one)
+# 3. Save one frame from each one (not the first frame, too dark)
 # 4. Store the image from the first video of each day in one directory
 # 5. Store all imgaes in a second directory 
 
