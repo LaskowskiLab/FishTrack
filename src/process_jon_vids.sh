@@ -52,7 +52,8 @@ for d in $dir_list; do      ## Loop through directories
         echo $file_list
         if [[ "$file_list" == *".jpg"* ]]; then
             echo "this one already has a jpg, skipping for now"
-            continue
+            echo "but I'm doing it anyway."
+            #continue
         elif [[ "$file_list" == *".h264"* ]]; then
             echo "at least one h264 found, copying file(s)"
             rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.h264" -P
