@@ -50,10 +50,10 @@ for d in $dir_list; do      ## Loop through directories
 
         file_list=$(rclone lsf aperkes:pivideos/$d$s) ##Check that this shouldn't be $d/$s
         echo $file_list
-        if [[ "$file_list" == *".png" ]]; then
-            echo "this one already has a png, skipping for now"
+        if [[ "$file_list" == *".jpg"* ]]; then
+            echo "this one already has a jpg, skipping for now"
             continue
-        elif [[ "$file_list" == *".h264" ]]; then
+        elif [[ "$file_list" == *".h264"* ]]; then
             echo "at least one h264 found, copying file(s)"
             rclone copy aperkes: $working_dir --include "/pivideos/"$d$s"*.h264" -P
             h264_list=$(ls $working_dir"pivideos/$d$s"*.h264)
@@ -62,28 +62,28 @@ for d in $dir_list; do      ## Loop through directories
             for h in $h264_list; do
                 h264_path=$h
                 h264_name="$(basename $h)" ## this strips the path
-                png_path=$working_dir${h264_name%h264}png
+                jpg_path=$working_dir${h264_name%h264}jpg
 
                 echo $h264_path
-                echo $png_path
+                echo $jpg_path
 
-                ffmpeg -i $h264_path -ss 5 -frames:v 1 -q:v 2 $png_path -y
+                ffmpeg -i $h264_path -ss 5 -frames:v 1 -q:v 2 $jpg_path -y
                 #rm $h264_path ## delete downloaded h264
-                if test -f "$png_path"; then
-                    echo 'Png made, copying to local and remote'
+                if test -f "$jpg_path"; then
+                    echo 'JPEG made, copying to local and remote'
                     if [[ $COUNT == 0 ]]; then
-                        cp $png_path $v1_dir
+                        cp $jpg_path $v1_dir
                     fi
-                    cp $png_path $vAll_dir
-                    rclone move $png_path aperkes:pivideos/$d$s -P
+                    cp $jpg_path $vAll_dir
+                    rclone move $jpg_path aperkes:pivideos/$d$s -P
                 else
                     echo "Img failed. I'll just make a note here and move on..."
                     date >> $working_dir/flag.working.txt
                     echo "FFMPEG Failed" >> $working_dir/flag.working.txt
                 let COUNT++
                 fi
-            rm -rf $working_dir/pivideos/"$d$s" ## Remove the directory too
             done
+        rm -rf $working_dir/pivideos/"$d$s" ## Remove the whole directory 
         fi
     done
     break
