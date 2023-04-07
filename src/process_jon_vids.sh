@@ -80,6 +80,7 @@ for d in $dir_list; do      ## Loop through directories
                     echo "Img failed. I'll just make a note here and move on..."
                     date >> $working_dir/flag.working.txt
                     echo "FFMPEG Failed" >> $working_dir/flag.working.txt
+                    rclone copyto $working_dir/flag.working.txt aperkes:pivideos/$d$s'flag.check.txt'
                 let COUNT++
                 fi
             done
