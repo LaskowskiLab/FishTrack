@@ -89,7 +89,6 @@ for d in $dir_list; do      ## Loop through directories
         rm -rf $working_dir/pivideos/"$d$s" ## Remove the whole directory 
         fi
     done
-    break
 done
 
 
