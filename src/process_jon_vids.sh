@@ -71,7 +71,7 @@ for d in $dir_list; do      ## Loop through directories
                 echo $jpg_path
 
                 ffmpeg -i $h264_path -ss 5 -frames:v 1 -q:v 2 $jpg_path -y
-                #rm $h264_path ## delete downloaded h264
+                rm $h264_path ## delete downloaded h264
                 if test -f "$jpg_path"; then
                     echo 'JPEG made, copying to local and remote'
                     if [[ $COUNT == 0 ]]; then
