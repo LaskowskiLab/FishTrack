@@ -52,9 +52,9 @@ for d in $dir_list; do      ## Loop through directories
         file_list=$(rclone lsf aperkes:pivideos/$d$s) ##Check that this shouldn't be $d/$s
         echo $file_list
         if [[ "$file_list" == *".jpg"* ]]; then
-            echo "this one already has a jpg, can skip"
-            echo "but I'm doing it anyway."
-            #continue
+            echo "this one already has a jpg, can skip today"
+            #echo "but I'm doing it anyway."
+            continue
         fi
         if [[ "$file_list" == *".h264"* ]]; then
             echo "at least one h264 found, copying file(s)"
@@ -74,7 +74,7 @@ for d in $dir_list; do      ## Loop through directories
                 rm $h264_path ## delete downloaded h264
                 if test -f "$jpg_path"; then
                     echo 'JPEG made, copying to local and remote'
-                    if [[ $COUNT == 0 ]]; then
+                    if [ "$COUNT" == '0' ]; then
                         cp $jpg_path $v1_dir
                     fi
                     cp $jpg_path $vAll_dir
