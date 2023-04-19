@@ -1,0 +1,12 @@
+pi@raspberrypi13.local
+pi@raspberrypi14.local
+pi@raspberrypi15.local
+pi@raspberrypi16.local
+pi@raspberrypi17.local
+pi@raspberrypi18.local
+pi@raspberrypi19.local
+pi@raspberrypi20.local
+pi@raspberrypi21.local
+pi@raspberrypi22.local
+pi@raspberrypi23.local
+pi@raspberrypi24.local
