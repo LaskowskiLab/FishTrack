@@ -17,5 +17,5 @@ do
 ## You will need to change your models here
     sleap-track -m $model_dir/finetuned352.centroid -m $model_dir/finetuned352.centered_instance --peak_threshold .4 --tracking.tracker flow --tracking.similarity iou $f
     sleap-convert $f.predictions.slp --format analysis -o $f.h5
-    python process_h5.py -i $f.h5 -c $pi_id
+    python process_oneh5.py -i $f.h5 
 done
