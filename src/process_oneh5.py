@@ -17,7 +17,6 @@ def build_parse():
     parser = argparse.ArgumentParser(description='Required and additional inputs')
     parser.add_argument('--in_file','-i',required=True,help='Path to input .h5 file, output from SLEAP')
     parser.add_argument('--out_file','-o',required=False,help='Path to csv output, if not specified, just uses existing filename')
-    parser.add_argument('--id','-c',required=False,help='Camera id, required if using the defined center points')
     parser.add_argument('--visualize','-v',action='store_true',help='Visualize plot, defaults to False')
     parser.add_argument('--dump','-d',action='store_true',help='Debug option to prevent saving output')
     return parser.parse_args()
