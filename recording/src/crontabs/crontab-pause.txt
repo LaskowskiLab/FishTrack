@@ -6,6 +6,9 @@
 ## Upload video (this also deletes the video from the pi)
 0 20 * * * bash /home/pi/recording/src/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
 
+## Perform hourly checks, but only once in the morning at 6:30 so we know it's different
+30 6 * * * bash /home/pi/recording/src/box_checkin.sh
+
 ## Reboot every sunday after recordings are done
 35 18 * * SUN reboot
 
