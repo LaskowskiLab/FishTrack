@@ -61,7 +61,7 @@ n_nodes = len(node_names)
 ## Create an stacked array for all the tracks
 ## This can't be this big, it breaks.
 
-cleaned_tracks = np.full([n_frames,n_nodes,2],np.nan)
+cleaned_tracks = np.full([n_fish,n_frames,n_nodes,2],np.nan)
 
 error_count = 0
 #for t in tqdm(range(n_tracks)):
