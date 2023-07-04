@@ -69,7 +69,7 @@ for t in range(n_tracks):
     split_track = False
     frames = track_occupancy[t] == 1 ## Needs to do the bool here.
     track = locations[frames,:,:,t]
-    cleaned_tracks[frames] = track
+    cleaned_tracks[0,frames] = track ## Right now it just assigns to 0th fish.
 ## Average all overlapping tracks (there shouldn't be many)
 ## This should get it by fish
 #print('averaging tracks')
@@ -83,7 +83,7 @@ fig,ax = plt.subplots()
 visible_frames = np.zeros(n_fish)
 proportion_visible = np.zeros(n_fish)
 velocities = []
-center_ratio = []
+#center_ratio = []
 for f in range(n_fish):
     ax.scatter(cleaned_tracks[f,:,4,0],400-cleaned_tracks[f,:,4,1],alpha=.05,marker='.')
     #ax.plot(cleaned_tracks[f,:,4,0],400-cleaned_tracks[f,:,4,1],alpha=.1)
@@ -95,16 +95,16 @@ for f in range(n_fish):
     velocities.append(median_velocity)
 
     visible_track = cleaned_tracks[f,:,4][~np.isnan(cleaned_tracks[f,:,4,0])]
-    xs = np.abs(visible_track[:,0] - center_point[0]) < 30
-    ys = np.abs(visible_track[:,1] - center_point[1]) < 30
-    courage_count = np.sum(np.logical_or(xs,ys))
-    courage_ratio = courage_count / len(visible_track)
-    center_ratio.append(courage_ratio)
+    #xs = np.abs(visible_track[:,0] - center_point[0]) < 30
+    #ys = np.abs(visible_track[:,1] - center_point[1]) < 30
+    #courage_count = np.sum(np.logical_or(xs,ys))
+    #courage_ratio = courage_count / len(visible_track)
+    #center_ratio.append(courage_ratio)
 
 print(':: STATS ::')
 print('proportion visible:',proportion_visible)
 print('mean velocity:',velocities)
-print('proportion away from edge:',center_ratio)
+#print('proportion away from edge:',center_ratio)
 
 if args.visualize:
     fig.show()
@@ -119,7 +119,7 @@ if not args.dump:
         f.write(':: STATS ::')
         f.write('\nproportion visible: ' + str(np.round(proportion_visible,3)))
         f.write('\nmean velocity: ' + str(np.round(velocities,3)))
-        f.write('\nproportion away from edge: ' + str(np.round(center_ratio,3)))
+        #f.write('\nproportion away from edge: ' + str(np.round(center_ratio,3)))
     columns = ['Frame','Fish','x','y']
     frame_list,fish_list,x_list,y_list = [],[],[],[]
     for f in range(n_fish):
