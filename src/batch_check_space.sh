@@ -34,8 +34,9 @@ fi
 
 if [ -z "$raspi_id" ]; then
     echo Empty
-    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is not recording"
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is *not recording*"
 else
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is currently recording"
     echo Recording
 
     #bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "TEST: $i is recording ($raspi_id)"
