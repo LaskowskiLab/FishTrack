@@ -104,11 +104,22 @@ else:
 ## Check if the shape is weird, this generally happens when one of the tags are missing
     if max_dim / min_dim > 4:
         print('Warning: proportion is a bit wonky, you should check this one')
+        if args.id in crop_dict.keys():
+            x,y,out_w,out_h = crop_dict[args.id]
+        else:
+            raise Exception("Tags failed and I couldn't find a dict, check your camera and tag positioning, or include a dict.tsv with crop instructions")
+    if out_w < 500 or out_h < 500:
+        print('Warning: Video too small, you should check this too')
 
+        if args.id in crop_dict.keys():
+            x,y,out_w,out_h = crop_dict[args.id]
+        else:
+            raise Exception("Tags failed and I couldn't find a dict, check your camera and tag positioning, or include a dict.tsv with crop instructions")
     if '.MOV' in in_file: ## Note that open CV doesn't know anything about reference frame, but ffmpeg apparently does
         # So we may need to use ffmpeg to ensure rotational consistency. 
         out_w = ymax - ymin
         out_h = xmax - xmin
+
         x = ymin
         y = xmin
 
