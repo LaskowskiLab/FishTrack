@@ -16,7 +16,7 @@ if [ -z "$space" ]; then
     continue
     fi
 
-suffix="$(ssh -o "StrictHostKeyChecking=no" $i " echo ~/recording/src/suffix.txt")"
+suffix="$(ssh -o "StrictHostKeyChecking=no" $i " cat ~/recording/src/suffix.txt")"
 raspi_id="$(ssh -o "StrictHostKeyChecking=no" $i " pgrep raspivid ")"
 
 
