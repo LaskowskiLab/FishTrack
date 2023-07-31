@@ -16,7 +16,9 @@ if [ -z "$space" ]; then
     continue
     fi
 
+suffix="$(ssh -o "StrictHostKeyChecking=no" $i " echo ~/recording/src/suffix.txt")"
 raspi_id="$(ssh -o "StrictHostKeyChecking=no" $i " pgrep raspivid ")"
+
 
 echo $space
 echo $raspi_id
@@ -34,9 +36,9 @@ fi
 
 if [ -z "$raspi_id" ]; then
     echo Empty
-    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is *not recording*"
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is *not recording*: $suffix"
 else
-    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is currently recording"
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "$i is currently recording: $suffix"
     echo Recording
 
     #bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "TEST: $i is recording ($raspi_id)"
