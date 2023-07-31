@@ -6,6 +6,11 @@ n_hours=${1-12}
 n_minutes=${2-60}
 f_rate=${3-1}
 
+if test -f "~/recording/src/suffix.txt"; then
+    suffix='cat ~/recording/src/suffix.txt'
+else
+    suffix='rogue'    
+
 ## Find the name, regardless of the pi.
 pi_name=${HOSTNAME: -4}
 if [[ $pi_name == "rypi" ]]; then
@@ -25,10 +30,8 @@ year_stamp=$(date "+%Y.%m")
 date_stamp=$(date "+%Y.%m.%d")
 dt_stamp=$(date "+%Y.%m.%d.%H.%M")
 
-## Be sure to check the parent directory exists
 
-## Use the batch.trex. tag if you want to have this batch processed
-directory_path=/home/pi/recording/$date_stamp.batch.trex/ 
+directory_path=/home/pi/recording/$date_stamp.$suffix/ 
 
 #directory_path=/home/pi/recording/$date_stamp/ 
 
