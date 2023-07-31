@@ -1,0 +1,6 @@
+## List of aliases that are saved into ~/.bash_aliases
+
+alias schedule_ON="bash ~/recording/src/schedule_on.sh"
+alias schedule_OFF="bash ~/recording/src/schedule_off.sh"
+alias set_suffix="bash ~/recording/src/set_suffix.sh"
+

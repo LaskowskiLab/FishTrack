@@ -4,7 +4,7 @@
 suffix=${1:-rogue}
 
 ## Rename suffix so that files are saved properly
-bash ~/recording/src/set_suffix $suffix
+bash ~/recording/src/set_suffix.sh $suffix
 
 ## Set crontab to the schedule that runs the pi
 crontab ~/recording/src/crontabs/crontab-pi.txt
