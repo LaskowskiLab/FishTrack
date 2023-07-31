@@ -23,7 +23,7 @@
 ## Reboot every Sunday (after recordings are done)
 35 18 * * SUN reboot 
 
-# Deletes any files older than 5 days (syntax is weird, idk)
+# Deletes any .jpg files older than 5 days (syntax is weird, idk)
 #0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
 #0 22 * * * find /home/pi/recording -empty -type d -delete
 
