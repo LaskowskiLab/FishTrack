@@ -11,7 +11,7 @@ model_dir="/home/ammon/Documents/Scripts/FishTrack/sleap/models"
 MINUTES=0 ## Resets MINUTES to 0, not that this is particularly important I don't think...
 t_end=${2-120} ## Sets end time to 2 hours (120 minutes) if no end time is specified. Use # for infinite running
 
-crop_dict='/home/ammon/Documents/Scripts/FishTrack/src/crop_dict.22.09.01.tsv'
+crop_dict='/home/ammon/Documents/Scripts/FishTrack/src/current_crop.tsv'
 center_dict='/home/ammon/Documents/Scripts/FishTrack/src/center_dict.22.02.25.tsv'
 
 ## the trex has to happen inside the trex environment, so I may as well just do that now
@@ -36,15 +36,15 @@ for d in $dir_list; do
     n="${n##0}"   # Drop leading 0 if necessary. 
     n="${n%/}"    # Drop trailing /
     echo $n
-    if [ "$n" -gt "12" ]; then 
-        echo "only doing first 12, moving on"
-        continue
-    fi
+    #if [ "$n" -gt "12" ]; then 
+    #    echo "only doing first 12, moving on"
+    #    continue
+    #fi
     echo "running $d"
-    subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only | grep batch.trex)
+    subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only --max-age 30d)
     echo $subdir_list
     if [ -z "$subdir_list" ]; then
-        echo "No batch.trex folders found, moving on"
+        echo "No recent folders found, moving on"
         continue
     fi
     for s in $subdir_list; do
