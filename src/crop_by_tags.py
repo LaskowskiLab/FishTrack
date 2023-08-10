@@ -16,11 +16,13 @@ import subprocess
 
 import argparse
 
+DEFAULT_CROP = '/home/ammon/Documents/Scripts/FishTrack/src/current_crop.tsv'
+
 def build_parse():
     parser = argparse.ArgumentParser(description='Required and additional inputs')
     parser.add_argument('--in_file','-i',required=True,help='Path to input img or video')
     parser.add_argument('--out_file','-o',required=False,help='Path to output, if not specified, goes to in_file.crop.mp4')
-    parser.add_argument('--crop_list','-x',required=False,help='Optional crop dict to specify locations')
+    parser.add_argument('--crop_list','-x',default=DEFAULT_CROP,help='Optional crop dict to specify locations')
     parser.add_argument('--force_dict','-m',action='store_true',help='If included, it will only use the specified dictionary. Requires id and crop_dict')
     parser.add_argument('--id','-c',required=False,help='Camera id, required if using the crop dict')
     return parser.parse_args()
@@ -28,15 +30,16 @@ def build_parse():
 
 args = build_parse()
 in_file = args.in_file
+
+crop_dict = {}
+import pdb;pdb.set_trace()
+
 if args.force_dict:
-    if args.id == None:
-        raise Exception('Using Force dict, but you no ID included. Be sure to include the ID and the crop_dict')
     if args.crop_list == None:
         raise Exception('Using Force dict, but you no crop_dict included. Be sure to include the ID and the crop_dict')
 
 ## Read in video and grab the first frame: 
 
-crop_dict = {}
 if args.crop_list is not None:
     #try:
     with open(args.crop_list) as f:
@@ -45,6 +48,11 @@ if args.crop_list is not None:
             crop_dict[k] = [int(l) for l in vs.split(',')]
     #except:
     #    print('Loading crop dictionary failed, going to try my best')
+
+if args.id == None:
+    for k in crop_dict.keys():
+        if k in args.in_file:
+            args.id = k
 
 #in_file = '/Users/Ammon/Downloads/IMG_5624.MOV'
 
@@ -68,6 +76,7 @@ if args.force_dict:
     x,y,out_w,out_h = crop_dict[args.id]
 elif len(corners) <= 2:
     print(crop_dict.keys())
+    print(args.id)
     if args.id in crop_dict.keys():
         print('Warning: crop tags could not be identified, checking for hard coded crop')
         x,y,out_w,out_h = crop_dict[args.id]
@@ -131,4 +140,5 @@ else:
     out_file = '.crop.'.join(in_file.rsplit('.',1)) ## sort of hacky line to replace .jpg with .crop.jpg without touching any preceding .'s 
 
 command = f'ffmpeg -i "{in_file}" -filter:v "crop={out_w}:{out_h}:{x}:{y}" -c:v libx264 -crf 15 "{out_file}" -y'
+
 subprocess.call(command, shell=True)
