@@ -21,11 +21,14 @@ while True:
 cap.release()
 cv2.destroyAllWindows()
 
+"""
 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 fig,ax = plt.subplots()
-gray = np.flipud(gray)
+#gray = np.flipud(gray)
 
 ax.imshow(gray)
 
 plt.show()
+"""
+print('Done!')
