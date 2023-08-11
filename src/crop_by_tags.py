@@ -32,7 +32,6 @@ args = build_parse()
 in_file = args.in_file
 
 crop_dict = {}
-import pdb;pdb.set_trace()
 
 if args.force_dict:
     if args.crop_list == None:
