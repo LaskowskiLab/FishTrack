@@ -41,7 +41,7 @@ for d in $dir_list; do
     #    continue
     #fi
     echo "running $d"
-    subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only --max-age 30d)
+    subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only | grep 20)
     echo $subdir_list
     if [ -z "$subdir_list" ]; then
         echo "No recent folders found, moving on"
@@ -64,9 +64,10 @@ for d in $dir_list; do
             echo "Complete flag found, not entirely sure what that means, but moving on"
             continue
         elif [[ "$file_list" == *"flag.check"* ]]; then
-            echo "Check flag found, going to do it"
+            #echo "Check flag found, going to do it"
+            echo "Check flag found, skipping for now"
+            continue
             rclone moveto aperkes:pivideos/$d$s'flag.check.txt' aperkes:pivideos/$d$s'flag.working.txt'
-            #continue
         fi
 
         if [[ "$file_list" == *"crop.mp4"* ]]; then
