@@ -38,6 +38,7 @@ def build_parse():
     parser.add_argument('--quadrants','-q',required=False,help='List of quadrants (left to right, top down) where fish are, i.e. [0,1,3]')
     parser.add_argument('--visualize','-v',action='store_true',help='Visualize plot, defaults to False')
     parser.add_argument('--dump','-d',action='store_true',help='Debug option to prevent saving output')
+    parser.add_argument('--spots','-f',required=False,help='Path to mp4 of spotlighted video from spotlight.py')
     return parser.parse_args()
 
 ## Input: Takes a track (1 fish, all nodes, all frames)
@@ -57,6 +58,66 @@ def smooth_diff(track,win=25,poly=3):
 ## This simple velocity should probably be smoothed still, I don't love the way this works...
     simple_vel = np.linalg.norm(simple_diff,axis=1)
     return simple_vel
+
+## Only keep tracks that overlap with background subtraction.
+def spot_filter(locations,track_occupancy,spot_file):
+    cap = cv2.VideoCapture(spot_file)
+
+    n_tracks = np.shape(locations)[3]
+    for t in range(n_tracks): 
+        frames = track_occupancy[t] == 1
+        f_start = np.argmax(frames)
+         
+        cap.set(cv2.CAP_PROP_POS_FRAMES, f_start-1)
+        n_frames = sum(frames)
+        score = np.zeros(n_frames)
+        while count < n_frames:
+            res,frame = cap.read() 
+            count += 1
+            if not res:
+                break
+            if frame[x,y] == 255:
+                score[count] = 1
+        if np.mean(score) < 0.25:
+            track_occupancy[t] = 0
+    cap.release()
+    return locations,track_occupancy
+
+## You know, like a quadrant bottle neck
+def quadle_neck(locations,track_occupancy):
+    n_tracks = np.shape(locations)[3]
+    track_quad,quad_array = tracks_to_quad(locations,track_occupancy) 
+    for t in range(n_tracks): 
+        frames = track_occupancy[t] == 1
+        overlap_array = quad_array[:,frames] == track_quad[t]
+        competing_ts = np.nansum(overlap_array,axis = 0)
+
+        if np.nansum(competing_ts) > 1:
+            t_score = np.nansum(prediction_scores[t])
+            for t_ in np.argwhere(competing_ts == True):
+                score = predictions_scores[t_]
+                if score > t_score:
+                    track_occupancy[t_] = 0 ## or nan?
+                    #track_occupancy[t_,frames] = 0 ## or nan?
+                elif score < t_score: ## if that track is better, delete this I guess? 
+                    track_occupancy[t] = 0
+                    #track_occupancy[t_,frames] = 0 ## or nan?
+                    break
+
+    return locations,track_occupancy
+
+def track_to_quad(locations,track_occupancy):
+    n_tracks = np.shape(locations)[3]
+    track_quad = []
+    quad_array = np.array(track_occupancy)
+
+    for t in range(n_tracks):
+        frames = track_occupancy[t] == 1 ## Needs to do the bool here.
+        track = locations[frames,:,:,t]
+        f_loc = get_quadrant(np.nanmean(track,axis=0),CENTER)
+        quad_array[t] = f_loc
+    track_quad.append(f_loc)
+    return track_quad, quad_array
 
 args = build_parse()
 
@@ -88,6 +149,7 @@ else:
             if k == args.id:
                 center_point = [int(c) for c in cs.split(',')]
                 break
+
 if center_point is None:
     print('could not find center point, using default')
     center_point = CENTER
@@ -111,36 +173,17 @@ for t in range(n_tracks):
     max_points = np.nanmax(track,axis=(0,1)) ## get x,y mead of tracklet 
     min_points = np.nanmin(track,axis=(0,1))
     #print(mean_points)
-    if min_points[0] <= center_point[0] and max_points[0] <= center_point[0]: ## on left side
-        if min_points[1] <= center_point[1] and max_points[1] <= center_point[1]: ## on the top half
-            f_loc = 0
-        elif min_points[1] > center_point[1] and max_points[1] > center_point[1]: ## on the top half
-            f_loc = 2
-        else:
-            #print('oops:',t,np.argmax(frames),min_points,max_points)
-            error_count += 1
-            split_track=True
-    elif min_points[0] > center_point[0] and max_points[0] > center_point[0]: ## on left side
-        if min_points[1] <= center_point[1] and max_points[1] <= center_point[1]: ## on the top half
-            f_loc = 1
-        elif min_points[1] > center_point[1] and max_points[1] > center_point[1]: ## on the top half
-            f_loc = 3
-        else:
-            #print('oops:',t,np.argmax(frames),min_points,max_points)
-            error_count += 1
-            split_track=True
-    else:
-        #print('oops:',t,np.argmax(frames),min_points,max_points)
+    loc_min = get_quadrant(min_points)
+    loc_max = get_quadrant(max_points)
+
+    if loc_min == loc_max:
+        f_loc = loc_min
+        cleaned_tracks[f_loc,frames,:,:] = locations[frames,:,:,t]
+    else: ## if the track enteres two different quadrants, it's probably two different fish
         error_count += 1
-        split_track=True
-    if split_track:
-        #print('track split: manually assigning points')
         for f in np.arange(n_frames)[frames]:
             f_loc = get_quadrant(np.nanmean(locations[f,:,:,t],axis=0),center_point)
             cleaned_tracks[f_loc,f,:,:] = locations[f,:,:,t]
-    else:
-        cleaned_tracks[f_loc,frames,:,:] = locations[frames,:,:,t]
-    #print(locations[frames,:,:,t])
 
 ## Average all overlapping tracks (there shouldn't be many)
 ## This should get it by fish
