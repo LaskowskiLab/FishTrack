@@ -1,25 +1,34 @@
 import sys
 
-with open('vid_inbox.txt') as f:
+with open('./path_list/jay.adults.videos.txt') as f:
     VIDEOS = f.read().splitlines()
 
-with open('inbox_paths.txt') as f:
+with open('./path_list/jay.adults.paths.txt') as f:
     BOX_PATHS = f.read().splitlines()
+
+M_CENTERED = "/data/sleapModels/efficientb3.b0.centered_instance.400"
+M_CENTROID = "/data/sleapModels/efficientb3.b0.centroid.400"
+CENTER_DICT = "../src/center_dict.23.08.01.tsv" 
 
 vid_to_path = dict(zip(VIDEOS,BOX_PATHS))
 
-print('Videos to process:', VIDEOS, file=sys.stderr)
+#print('Videos to process:', VIDEOS, file=sys.stderr)
+
+## This is an iffy hack
+shell("conda config --add envs_dirs /home/ammon/anaconda3/envs")
 
 rule all:
     input:
         expand("../working_dir/videos/{video}.mp4",video=VIDEOS),
         expand("../working_dir/crops/{video}.crop.mp4",video=VIDEOS),
         expand("../working_dir/spots/{video}.spot.mp4",video=VIDEOS),
-        expand("../working_dir/sleap/{video}.slp",video=VIDEOS),
+        expand("../working_dir/sleap/{video}.predictions.slp",video=VIDEOS),
         expand("../working_dir/h5/{video}.h5",video=VIDEOS),
         expand("../results/csv/{video}.csv",video=VIDEOS),
         expand("../results/txt/{video}.txt",video=VIDEOS),
-        expand("{video}.log",video=VIDEOS),
+        expand("../results/logs/{video}.crop.log",video=VIDEOS),
+        expand("../results/logs/{video}.spot.log",video=VIDEOS),
+        expand("../results/logs/{video}.h5.log",video=VIDEOS),
 
 rule copy_video:
     output: temporary("../working_dir/videos/{video}.mp4")
@@ -27,7 +36,7 @@ rule copy_video:
          remote = lambda wildcards: vid_to_path[wildcards.video]
     threads: 2
     run:
-        #shell("rclone copy {input.test}{videos}.mp4 ../working_dir/videos/{videos}.mp4")
+        #shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 ../working_dir/videos/{wildcards.video}.mp4")
         shell("echo rclone copy aperkes:{params.remote}{wildcards.video}.mp4 ../working_dir/videos/{wildcards.video}.mp4")
         shell("touch ../working_dir/videos/{wildcards.video}.mp4")
 
@@ -36,16 +45,19 @@ rule crop_video:
     input:  "../working_dir/videos/{video}.mp4" 
     threads: 4
     run:
-        #shell("python crop_by_dict.py -i {input}")
-        shell("echo python crop_by_dict.py -i {input}")
+        #shell("python crop_by_tags.py -i {input} -o ../working_dir/crops/{wildcards.video}.crop.mp4")
+        shell("echo python crop_by_tags.py -i {input} -o ../working_dir/crops/{wildcards.video}.crop.mp4")
         shell("touch ../working_dir/crops/{wildcards.video}.crop.mp4")
 
 rule upload_crop:
+    output: "../results/logs/{video}.crop.log"
     input:  "../working_dir/crops/{video}.crop.mp4"
     threads: 1
+    params:  
+         remote = lambda wildcards: vid_to_path[wildcards.video]
     run:
-        #shell("rclone copy {input} {remote}.crop.mp4")
-        shell("echo rclone copy {input} {remote}.crop.mp4")
+        shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.crop.mp4")
+        shell("echo wildcards.video >> ../results/logs/{wildcards.video}.crop.log")
 
 rule spot_video:
     output: temporary("../working_dir/spots/{video}.spot.mp4")
@@ -54,41 +66,49 @@ rule spot_video:
     conda:
         "tracking"
     shell:
-        #shell("python spotlight.py {input}")
-        "echo python spotlight.py {input};"
+        #"python spotlight.py {input} ../working_dir/spots/{wildcards.video}.spot.mp4;"
+        "echo python spotlight.py {input} ../working_dir/spots/{wildcards.video}.spot.mp4;"
         "touch ../working_dir/spots/{wildcards.video}.spot.mp4"
 
 rule upload_spot:
+    output: "../results/logs/{video}.spot.log"
     input:  "../working_dir/spots/{video}.spot.mp4"
     threads: 1
+    params:  
+         remote = lambda wildcards: vid_to_path[wildcards.video]
     run:
         #shell("rclone copy {input} {remote}.spot.mp4")        
-        shell("echo rclone copy {input} {remote}.spot.mp4")        
+        shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.spot.mp4")        
+        shell("echo wildcards.video > ../results/logs/{wildcards.video}.spot.log")
 
 rule inference:
-    output: temporary("../working_dir/sleap/{video}.slp")
-    input:  "../working_dir/spots/{video}.spot.mp4"
+    output: temporary("../working_dir/sleap/{video}.predictions.slp")
+    input:  "../working_dir/crops/{video}.crop.mp4"
     threads: 1
     conda:
         "sleap"
+    params:
+        centered = M_CENTERED,
+        centroid = M_CENTROID,
     shell:
         #shell("sleap-track -i {input} ....")
-        "echo sleap-track -i {input} ....;"
-        "touch ../working_dir/sleap/{wildcards.video}.slp"
+        #"sleap-track -m params.centered -m params.centroid --peak_threshold 0.4 {input} -o ../working_dir/sleap/{wildcards.video}.predictions.slp"
+        "echo sleap-track -m params.centered -m params.centroid --peak_threshold 0.4 {input} -o ../working_dir/sleap/{wildcards.video}.predictions.slp"
+        "touch ../working_dir/sleap/{wildcards.video}.predictions.slp"
 
 rule convert_h5:
     output: temporary("../working_dir/h5/{video}.h5")
-    input:  "../working_dir/sleap/{video}.slp"
+    input:  "../working_dir/sleap/{video}.predictions.slp"
 
     conda:
         "sleap"
     shell:
-        #"sleap-convert -i {input} .... "
-        "echo sleap-convert -i {input} ....; "
+        #"sleap-convert -i {input} --format analysis -o ../working_dir/h5/{wildcards.video}.h5"
+        "echo "sleap-convert -i {input} --format analysis -o ../working_dir/h5/{wildcards.video}.h5"
         "touch ../working_dir/h5/{wildcards.video}.h5"
 
 rule upload_h5:
-    output: "{video}.log"
+    output: "../results/logs/{video}.h5.log"
     input:  "../working_dir/h5/{video}.h5"
     threads: 1
     params:  
@@ -96,15 +116,18 @@ rule upload_h5:
     run:
         #shell("rclone copy aperkes:{remote}{wildcards.video}.h5")
         shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.h5")
-        shell("echo wildcards.video > {wildcards.video}.log")
+        shell("echo wildcards.video > ../results/logs/{wildcards.video}.h5.log")
 
 rule process_h5:
     output: 
         "../results/csv/{video}.csv",
         "../results/txt/{video}.txt",
     input:  "../working_dir/h5/{video}.h5"
+    params:
+        center = CENTER_DICT
+        spots = "../working_dir/spots/{wildcards.video}.spots.mp4"
     run:
         #shell("python process_h5.py -i {input}")
-        shell("echo python process_h5.py -i {input};")
+        shell("echo python process_h5.py -i {input} -x params.center;")
         shell("touch ../results/csv/{wildcards.video}.csv")
         shell("touch ../results/txt/{wildcards.video}.txt")
