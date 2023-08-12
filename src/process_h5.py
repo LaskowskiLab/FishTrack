@@ -2,6 +2,7 @@ import h5py
 import sys
 import numpy as np
 import pandas as pd
+import cv2
 from scipy.signal import savgol_filter
 
 from tqdm import tqdm 
@@ -9,7 +10,7 @@ import argparse
 
 from matplotlib import pyplot as plt
 
-CENTER = [175,203]
+CENTER = [349,425]
 
 ## Code which takes .h5 files (output from SLEAP) and processes it to usable data
 
@@ -59,43 +60,55 @@ def smooth_diff(track,win=25,poly=3):
     simple_vel = np.linalg.norm(simple_diff,axis=1)
     return simple_vel
 
-## Only keep tracks that overlap with background subtraction.
+## Only keep frames that overlap with background subtraction.
 def spot_filter(locations,track_occupancy,spot_file):
     cap = cv2.VideoCapture(spot_file)
 
     n_tracks = np.shape(locations)[3]
     for t in range(n_tracks): 
         frames = track_occupancy[t] == 1
-        f_start = np.argmax(frames)
+        f_start = np.argmax(frames) + 1
          
         cap.set(cv2.CAP_PROP_POS_FRAMES, f_start-1)
         n_frames = sum(frames)
         score = np.zeros(n_frames)
+        f_index = f_start
+        count = 1
         while count < n_frames:
-            res,frame = cap.read() 
-            count += 1
-            if not res:
+            ret,frame = cap.read() 
+            if not ret:
                 break
-            if frame[x,y] == 255:
-                score[count] = 1
-        if np.mean(score) < 0.25:
-            track_occupancy[t] = 0
+            if frames[f_index] == False:
+                f_index += 1
+                continue
+            x,y = np.nanmedian(locations[f_index,:,:,t],axis=0).astype(int)
+            if frame[y,x,0] == 0: 
+                #print('found 0')
+                if np.sum(frame[y-10:y+10,x-10:x+10,0]) == 0: ### Row column notation
+                    #print('deleting:',t,f_index,frame[y,x])
+                    #import pdb; pdb.set_trace()
+                    track_occupancy[t,f_index] = 0 ## Just delete that frame
+            f_index += 1
+            count += 1
+        #print(t,np.mean(score))
+        #if np.mean(score) < 0.25:
+        #    track_occupancy[t] = 0
     cap.release()
     return locations,track_occupancy
 
 ## You know, like a quadrant bottle neck
-def quadle_neck(locations,track_occupancy):
+def quadle_neck(locations,track_occupancy,instance_scores):
     n_tracks = np.shape(locations)[3]
-    track_quad,quad_array = tracks_to_quad(locations,track_occupancy) 
+    track_quad,quad_array = track_to_quad(locations,track_occupancy) 
     for t in range(n_tracks): 
         frames = track_occupancy[t] == 1
         overlap_array = quad_array[:,frames] == track_quad[t]
-        competing_ts = np.nansum(overlap_array,axis = 0)
+        competing_ts = np.nansum(overlap_array,axis = 1)
 
         if np.nansum(competing_ts) > 1:
-            t_score = np.nansum(prediction_scores[t])
-            for t_ in np.argwhere(competing_ts == True):
-                score = predictions_scores[t_]
+            t_score = np.nanmean(instance_scores[:,t])
+            for t_ in np.argwhere(competing_ts > 1)[:,0]:
+                score = np.nanmean(instance_scores[:,t_])
                 if score > t_score:
                     track_occupancy[t_] = 0 ## or nan?
                     #track_occupancy[t_,frames] = 0 ## or nan?
@@ -103,20 +116,33 @@ def quadle_neck(locations,track_occupancy):
                     track_occupancy[t] = 0
                     #track_occupancy[t_,frames] = 0 ## or nan?
                     break
-
     return locations,track_occupancy
 
-def track_to_quad(locations,track_occupancy):
+## This assumes that tracks can be assigned to a single point, which is not a good assumption
+def track_to_quad(locations,track_occupancy,center_point = CENTER):
     n_tracks = np.shape(locations)[3]
     track_quad = []
-    quad_array = np.array(track_occupancy)
+    quad_array = np.full(np.shape(track_occupancy),np.nan)
 
     for t in range(n_tracks):
         frames = track_occupancy[t] == 1 ## Needs to do the bool here.
         track = locations[frames,:,:,t]
-        f_loc = get_quadrant(np.nanmean(track,axis=0),CENTER)
-        quad_array[t] = f_loc
-    track_quad.append(f_loc)
+         
+        med_track = np.nanmedian(track,axis=1)
+        max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
+        min_points = np.nanmin(med_track,0)
+
+        loc_min = get_quadrant(min_points)
+        loc_max = get_quadrant(max_points)
+
+        if loc_min == loc_max:
+            f_loc = loc_min
+        else:
+           # this track is in two places, that's trouble. 
+           f_loc = np.nan
+        #f_loc = get_quadrant(np.nanmean(track,axis=(0,1)),center_point)
+        quad_array[t,track_occupancy[t]] = f_loc
+        track_quad.append(f_loc)
     return track_quad, quad_array
 
 args = build_parse()
@@ -130,7 +156,8 @@ with h5py.File(args.in_file, 'r') as f:
     locations = f['tracks'][:].T
     node_names = [n.decode() for n in f["node_names"][:]]
     track_occupancy = f['track_occupancy'][:].T
-
+    video_path = str(f['video_path'][()])[2:-1]
+    instance_scores = f['instance_scores'][:].T
 
 if args.n_fish == None:
     n_fish = 4
@@ -139,8 +166,17 @@ else:
 
 center_point = None
 if args.center_list == None or args.id == None:
-    print('no center point given, using default:',CENTER)
-    center_point = CENTER
+    print('no center point given..')
+    try:
+        print('trying to check from h5 source video:')
+        cap = cv2.VideoCapture(video_path)
+        height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        cap.release()
+        center_point = [width //2, height//2]
+    except:
+        print('Nevermind, using default:',CENTER)
+        center_point = CENTER
 else:
     crop_dict = {}
     with open(args.center_list) as f:
@@ -149,10 +185,8 @@ else:
             if k == args.id:
                 center_point = [int(c) for c in cs.split(',')]
                 break
-
-if center_point is None:
-    print('could not find center point, using default')
-    center_point = CENTER
+print(center_point)
+CENTER = center_point
 
 print('using center point:',center_point)
 n_frames = len(locations)
@@ -162,6 +196,11 @@ n_nodes = len(node_names)
 ## Create an stacked array for all the tracks
 ## This can't be this big, it breaks.
 
+print('clearing overlapping tracks')
+locations_1,track_occupancy_1 = quadle_neck(np.array(locations),np.array(track_occupancy),instance_scores)
+
+print('running spot filter')
+locations_2,track_occupancy_2 = spot_filter(np.array(locations),np.array(track_occupancy),args.spots)
 cleaned_tracks = np.full([n_fish,n_frames,n_nodes,2],np.nan)
 
 error_count = 0
@@ -170,9 +209,11 @@ for t in range(n_tracks):
     split_track = False
     frames = track_occupancy[t] == 1 ## Needs to do the bool here.
     track = locations[frames,:,:,t]
-    max_points = np.nanmax(track,axis=(0,1)) ## get x,y mead of tracklet 
-    min_points = np.nanmin(track,axis=(0,1))
-    #print(mean_points)
+
+    med_track = np.nanmedian(track,axis=1)
+    max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
+    min_points = np.nanmin(med_track,0)
+
     loc_min = get_quadrant(min_points)
     loc_max = get_quadrant(max_points)
 
