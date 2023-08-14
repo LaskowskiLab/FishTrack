@@ -60,6 +60,101 @@ def smooth_diff(track,win=25,poly=3):
     simple_vel = np.linalg.norm(simple_diff,axis=1)
     return simple_vel
 
+## Read through all the frames in a track and allocate them to correct quadrants
+def correct_track(locations,track_occupancy,t,center_point=CENTER):
+    frames = track_occupancy[t] == 1
+    n_frames,n_nodes,_,n_tracks = locations.shape
+
+    track = np.nanmedian(locations[:,:,:,t],axis=1)
+    med_point = np.nanmedian(track,axis=0)
+    primary_loc = get_quadrant(med_point)
+    new_occupancy = np.zeros([4,n_frames])
+    new_quads = np.full_like(new_occupancy,np.nan)
+
+    new_locations = np.full([n_frames,n_nodes,2,4],np.nan)
+    for f_ in np.argwhere(frames):
+        f_loc = get_quadrant(track[f_,:])
+        if f_loc != primary_loc:
+            new_quads[f_loc,f_] = 1
+            new_occupancy[f_,f_loc] = 1
+            new_locations[f_,:,:,f_loc] = locations[f_,:,:,t]
+            locations[f_,:,:,t] = np.nan
+            track_occupancy[t,f_] = 0
+    if len(quads) > 1:
+        for q in quads:
+            q_frames = frame_quads == q
+            new_locations[q_frames,:,:,q] = locations[q_frames,:,:,t]
+    not_0 = np.sum(new_occupancy,axis=1) != 0
+    new_locations = new_locations[:,:,:,not_0]
+    new_occupancy = new_occupancy[not_0,:]
+    new_quads = new_quads[not_0,:]
+    return new_locations,new_occupancy,primary_loc,new_quads
+
+
+## This assigns tracks to a unique quadrant. If possibe
+###  If tracks are split across 2-4 quads, it divides them and adds new tracks
+def track_to_quad(locations,track_occupancy,center_point = CENTER):
+    n_tracks = np.shape(locations)[3]
+    n_frames = np.shape(locations)[0]
+    track_quad = []
+    quad_array = np.full(np.shape(track_occupancy),np.nan)
+    all_quads = np.array([0,n_frames])
+
+## I make these because I'm going to be editing them in a function later
+    all_locations = np.array(locations)
+    all_occupancy = np.array(track_occupancy)
+    for t in range(n_tracks):
+        frames = track_occupancy[t] == 1 ## Needs to do the bool here.
+        track = locations[frames,:,:,t]
+         
+        med_track = np.nanmedian(track,axis=1)
+        max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
+        min_points = np.nanmin(med_track,0)
+
+        loc_min = get_quadrant(min_points)
+        loc_max = get_quadrant(max_points)
+
+        if loc_min == loc_max:
+            f_loc = loc_min
+        else:
+            # this track is in two places, that's trouble. 
+
+## Note, I am deleting the overlap within the function
+            new_locations,new_occupancy,f_loc,new_quads = correct_track(locations,track_occupancy,t,center_point)
+            all_locations = np.hstack(all_locations,new_locations]
+            all_occupancy = np.hstack(all_occupancy,new_occupancy)
+            all_quads = np.hstack(all_quads,new_quads)
+
+        #f_loc = get_quadrant(np.nanmean(track,axis=(0,1)),center_point)
+
+        quad_array[t,track_occupancy[t]] = f_loc
+        track_quad.append(f_loc)
+    
+    return track_quad, quad_array,[all_locations,all_occupancy]
+
+## You know, like a quadrant bottle neck
+def quadle_neck(locations,track_occupancy,instance_scores):
+    track_quad,quad_array,cleaned_data = track_to_quad(locations,track_occupancy) 
+    locations,track_occupancy = cleaned_data
+    n_tracks = np.shape(locations)[3]
+    for t in range(n_tracks): 
+        frames = track_occupancy[t] == 1
+        overlap_array = quad_array[:,frames] == track_quad[t]
+        competing_ts = np.nansum(overlap_array,axis = 1)
+
+        if np.nansum(competing_ts) > 1:
+            t_score = np.nanmean(instance_scores[:,t])
+            for t_ in np.argwhere(competing_ts > 1)[:,0]:
+                score = np.nanmean(instance_scores[:,t_])
+                if score > t_score:
+                    track_occupancy[t_] = 0 ## or nan?
+                    #track_occupancy[t_,frames] = 0 ## or nan?
+                elif score < t_score: ## if that track is better, delete this I guess? 
+                    track_occupancy[t] = 0
+                    #track_occupancy[t_,frames] = 0 ## or nan?
+                    break
+    return locations,track_occupancy
+
 ## Only keep frames that overlap with background subtraction.
 def spot_filter(locations,track_occupancy,spot_file):
     cap = cv2.VideoCapture(spot_file)
@@ -96,38 +191,73 @@ def spot_filter(locations,track_occupancy,spot_file):
     cap.release()
     return locations,track_occupancy
 
-## You know, like a quadrant bottle neck
-def quadle_neck(locations,track_occupancy,instance_scores):
-    n_tracks = np.shape(locations)[3]
-    track_quad,quad_array = track_to_quad(locations,track_occupancy) 
-    for t in range(n_tracks): 
-        frames = track_occupancy[t] == 1
-        overlap_array = quad_array[:,frames] == track_quad[t]
-        competing_ts = np.nansum(overlap_array,axis = 1)
+if __name__ == "__main__":
+    args = build_parse()
 
-        if np.nansum(competing_ts) > 1:
-            t_score = np.nanmean(instance_scores[:,t])
-            for t_ in np.argwhere(competing_ts > 1)[:,0]:
-                score = np.nanmean(instance_scores[:,t_])
-                if score > t_score:
-                    track_occupancy[t_] = 0 ## or nan?
-                    #track_occupancy[t_,frames] = 0 ## or nan?
-                elif score < t_score: ## if that track is better, delete this I guess? 
-                    track_occupancy[t] = 0
-                    #track_occupancy[t_,frames] = 0 ## or nan?
+    if args.out_file is None:
+        out_file = args.in_file.replace('.h5','.csv')
+    else:
+        out_file = args.out_file
+    with h5py.File(args.in_file, 'r') as f:
+        dset_names = list(f.keys())
+        locations = f['tracks'][:].T
+        node_names = [n.decode() for n in f["node_names"][:]]
+        track_occupancy = f['track_occupancy'][:].T
+        video_path = str(f['video_path'][()])[2:-1]
+        instance_scores = f['instance_scores'][:].T
+
+    if args.n_fish == None:
+        n_fish = 4
+    else:
+        n_fish = args.n_fish
+
+    center_point = None
+    if args.center_list == None or args.id == None:
+        print('no center point given..')
+        try:
+            print('trying to check from h5 source video:')
+            cap = cv2.VideoCapture(video_path)
+            height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            cap.release()
+            center_point = [width //2, height//2]
+        except:
+            print('Nevermind, using default:',CENTER)
+            center_point = CENTER
+    else:
+        crop_dict = {}
+        with open(args.center_list) as f:
+            for line in f:
+                k,cs = line.split()
+                if k == args.id:
+                    center_point = [int(c) for c in cs.split(',')]
                     break
-    return locations,track_occupancy
+    print(center_point)
+    CENTER = center_point
 
-## This assumes that tracks can be assigned to a single point, which is not a good assumption
-def track_to_quad(locations,track_occupancy,center_point = CENTER):
+    print('using center point:',center_point)
+    n_frames = len(locations)
     n_tracks = np.shape(locations)[3]
-    track_quad = []
-    quad_array = np.full(np.shape(track_occupancy),np.nan)
+    n_nodes = len(node_names)
 
+## Create an stacked array for all the tracks
+## This can't be this big, it breaks.
+
+    print('clearing overlapping tracks')
+## This actually reshapes locations and track_occupancy
+    locations_1,track_occupancy_1 = quadle_neck(np.array(locations),np.array(track_occupancy),instance_scores)
+
+    print('running spot filter')
+    locations_2,track_occupancy_2 = spot_filter(np.array(locations_1),np.array(track_occupancy_1),args.spots)
+    cleaned_tracks = np.full([n_fish,n_frames,n_nodes,2],np.nan)
+
+    error_count = 0
+#for t in tqdm(range(n_tracks)):
     for t in range(n_tracks):
+        split_track = False
         frames = track_occupancy[t] == 1 ## Needs to do the bool here.
         track = locations[frames,:,:,t]
-         
+
         med_track = np.nanmedian(track,axis=1)
         max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
         min_points = np.nanmin(med_track,0)
@@ -137,94 +267,13 @@ def track_to_quad(locations,track_occupancy,center_point = CENTER):
 
         if loc_min == loc_max:
             f_loc = loc_min
-        else:
-           # this track is in two places, that's trouble. 
-           f_loc = np.nan
-        #f_loc = get_quadrant(np.nanmean(track,axis=(0,1)),center_point)
-        quad_array[t,track_occupancy[t]] = f_loc
-        track_quad.append(f_loc)
-    return track_quad, quad_array
-
-args = build_parse()
-
-if args.out_file is None:
-    out_file = args.in_file.replace('.h5','.csv')
-else:
-    out_file = args.out_file
-with h5py.File(args.in_file, 'r') as f:
-    dset_names = list(f.keys())
-    locations = f['tracks'][:].T
-    node_names = [n.decode() for n in f["node_names"][:]]
-    track_occupancy = f['track_occupancy'][:].T
-    video_path = str(f['video_path'][()])[2:-1]
-    instance_scores = f['instance_scores'][:].T
-
-if args.n_fish == None:
-    n_fish = 4
-else:
-    n_fish = args.n_fish
-
-center_point = None
-if args.center_list == None or args.id == None:
-    print('no center point given..')
-    try:
-        print('trying to check from h5 source video:')
-        cap = cv2.VideoCapture(video_path)
-        height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        cap.release()
-        center_point = [width //2, height//2]
-    except:
-        print('Nevermind, using default:',CENTER)
-        center_point = CENTER
-else:
-    crop_dict = {}
-    with open(args.center_list) as f:
-        for line in f:
-            k,cs = line.split()
-            if k == args.id:
-                center_point = [int(c) for c in cs.split(',')]
-                break
-print(center_point)
-CENTER = center_point
-
-print('using center point:',center_point)
-n_frames = len(locations)
-n_tracks = np.shape(locations)[3]
-n_nodes = len(node_names)
-
-## Create an stacked array for all the tracks
-## This can't be this big, it breaks.
-
-print('clearing overlapping tracks')
-locations_1,track_occupancy_1 = quadle_neck(np.array(locations),np.array(track_occupancy),instance_scores)
-
-print('running spot filter')
-locations_2,track_occupancy_2 = spot_filter(np.array(locations),np.array(track_occupancy),args.spots)
-cleaned_tracks = np.full([n_fish,n_frames,n_nodes,2],np.nan)
-
-error_count = 0
-#for t in tqdm(range(n_tracks)):
-for t in range(n_tracks):
-    split_track = False
-    frames = track_occupancy[t] == 1 ## Needs to do the bool here.
-    track = locations[frames,:,:,t]
-
-    med_track = np.nanmedian(track,axis=1)
-    max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
-    min_points = np.nanmin(med_track,0)
-
-    loc_min = get_quadrant(min_points)
-    loc_max = get_quadrant(max_points)
-
-    if loc_min == loc_max:
-        f_loc = loc_min
-        cleaned_tracks[f_loc,frames,:,:] = locations[frames,:,:,t]
-    else: ## if the track enteres two different quadrants, it's probably two different fish
-        error_count += 1
-        for f in np.arange(n_frames)[frames]:
-            f_loc = get_quadrant(np.nanmean(locations[f,:,:,t],axis=0),center_point)
-            cleaned_tracks[f_loc,f,:,:] = locations[f,:,:,t]
+            cleaned_tracks[f_loc,frames,:,:] = locations[frames,:,:,t]
+        else: ## if the track enteres two different quadrants, it's probably two different fish
+            error_count += 1
+## This approach is ok, but it will just keep whichever track comes second
+            for f in np.arange(n_frames)[frames]:
+                f_loc = get_quadrant(np.nanmean(locations[f,:,:,t],axis=0),center_point)
+                cleaned_tracks[f_loc,f,:,:] = locations[f,:,:,t]
 
 ## Average all overlapping tracks (there shouldn't be many)
 ## This should get it by fish
@@ -234,56 +283,56 @@ for t in range(n_tracks):
 
 #print(averaged_tracks.shape)
 
-fig,ax = plt.subplots()
+    fig,ax = plt.subplots()
 
-print('error count:',error_count,'of',n_frames)
-visible_frames = np.zeros(n_fish)
-proportion_visible = np.zeros(n_fish)
-velocities = []
-center_ratio = []
-for f in range(n_fish):
-    ax.scatter(cleaned_tracks[f,:,4,0],400-cleaned_tracks[f,:,4,1],alpha=.05,marker='.')
-    #ax.plot(cleaned_tracks[f,:,4,0],400-cleaned_tracks[f,:,4,1],alpha=.1)
-    n_vis = np.sum(~np.isnan(cleaned_tracks[f,:,0,0]))
-    visible_frames[f] = n_vis
-    proportion_visible[f] = n_vis / n_frames
-    velocity = smooth_diff(cleaned_tracks[f,:,0])
-    median_velocity = np.nanmedian(velocity)
-    velocities.append(median_velocity)
-
-    visible_track = cleaned_tracks[f,:,4][~np.isnan(cleaned_tracks[f,:,4,0])]
-    xs = np.abs(visible_track[:,0] - center_point[0]) < 30
-    ys = np.abs(visible_track[:,1] - center_point[1]) < 30
-    courage_count = np.sum(np.logical_or(xs,ys))
-    courage_ratio = courage_count / len(visible_track)
-    center_ratio.append(courage_ratio)
-
-print(':: STATS ::')
-print('proportion visible:',proportion_visible)
-print('mean velocity:',velocities)
-print('proportion away from edge:',center_ratio)
-
-if args.visualize:
-    fig.show()
-    plt.show()
-
-if not args.dump:
-    fig.savefig(out_file.replace('.csv','.png'),dpi=300)
-
-    np.save(out_file.replace('.csv','.npy'),cleaned_tracks)
-
-    with open(out_file.replace('.csv','.txt'),'w') as f:
-        f.write(':: STATS ::')
-        f.write('\nproportion visible: ' + str(np.round(proportion_visible,3)))
-        f.write('\nmean velocity: ' + str(np.round(velocities,3)))
-        f.write('\nproportion away from edge: ' + str(np.round(center_ratio,3)))
-    columns = ['Frame','Fish','x','y']
-    frame_list,fish_list,x_list,y_list = [],[],[],[]
+    print('error count:',error_count,'of',n_frames)
+    visible_frames = np.zeros(n_fish)
+    proportion_visible = np.zeros(n_fish)
+    velocities = []
+    center_ratio = []
     for f in range(n_fish):
-        frame_list.extend(list(range(n_frames)))
-        fish_list.extend([str(f)] * n_frames)
-        x_list.extend(cleaned_tracks[f,:,4,0])
-        y_list.extend(cleaned_tracks[f,:,4,1])
-        
-    df = pd.DataFrame(list(zip(frame_list,fish_list,x_list,y_list)),columns=columns)
-    df.to_csv(out_file,index=False)
+        ax.scatter(cleaned_tracks[f,:,4,0],400-cleaned_tracks[f,:,4,1],alpha=.05,marker='.')
+        #ax.plot(cleaned_tracks[f,:,4,0],400-cleaned_tracks[f,:,4,1],alpha=.1)
+        n_vis = np.sum(~np.isnan(cleaned_tracks[f,:,0,0]))
+        visible_frames[f] = n_vis
+        proportion_visible[f] = n_vis / n_frames
+        velocity = smooth_diff(cleaned_tracks[f,:,0])
+        median_velocity = np.nanmedian(velocity)
+        velocities.append(median_velocity)
+
+        visible_track = cleaned_tracks[f,:,4][~np.isnan(cleaned_tracks[f,:,4,0])]
+        xs = np.abs(visible_track[:,0] - center_point[0]) < 30
+        ys = np.abs(visible_track[:,1] - center_point[1]) < 30
+        courage_count = np.sum(np.logical_or(xs,ys))
+        courage_ratio = courage_count / len(visible_track)
+        center_ratio.append(courage_ratio)
+
+    print(':: STATS ::')
+    print('proportion visible:',proportion_visible)
+    print('mean velocity:',velocities)
+    print('proportion away from edge:',center_ratio)
+
+    if args.visualize:
+        fig.show()
+        plt.show()
+
+    if not args.dump:
+        fig.savefig(out_file.replace('.csv','.png'),dpi=300)
+
+        np.save(out_file.replace('.csv','.npy'),cleaned_tracks)
+
+        with open(out_file.replace('.csv','.txt'),'w') as f:
+            f.write(':: STATS ::')
+            f.write('\nproportion visible: ' + str(np.round(proportion_visible,3)))
+            f.write('\nmean velocity: ' + str(np.round(velocities,3)))
+            f.write('\nproportion away from edge: ' + str(np.round(center_ratio,3)))
+        columns = ['Frame','Fish','x','y']
+        frame_list,fish_list,x_list,y_list = [],[],[],[]
+        for f in range(n_fish):
+            frame_list.extend(list(range(n_frames)))
+            fish_list.extend([str(f)] * n_frames)
+            x_list.extend(cleaned_tracks[f,:,4,0])
+            y_list.extend(cleaned_tracks[f,:,4,1])
+            
+        df = pd.DataFrame(list(zip(frame_list,fish_list,x_list,y_list)),columns=columns)
+        df.to_csv(out_file,index=False)
