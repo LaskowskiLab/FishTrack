@@ -6,7 +6,7 @@ import time
 #output_video = ('./test_spots.mp4')
 
 def make_spots(input_video,output_video):
-    cap = cv2.VideoCapture('./short_test.mp4')
+    cap = cv2.VideoCapture(input_video)
     bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
 
     fps = int(cap.get(cv2.CAP_PROP_FPS))
