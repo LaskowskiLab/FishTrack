@@ -76,7 +76,6 @@ def correct_track(locations,track_occupancy,instance_scores,t,center_point=CENTE
     new_quads = np.full_like(new_occupancy,np.nan)
 
     new_locations = np.full([n_frames,n_nodes,2,4],np.nan)
-    #import pdb;pdb.set_trace()
     for f_ in np.argwhere(frames)[:,0]:
         f_loc = get_quadrant(track[f_,:])
         if f_loc != primary_loc:
@@ -93,7 +92,6 @@ def correct_track(locations,track_occupancy,instance_scores,t,center_point=CENTE
     new_occupancy = new_occupancy[not_0,:]
     new_scores = new_scores[:,not_0]
     new_quads = new_quads[not_0,:]
-    #import pdb;pdb.set_trace() 
     return new_locations,new_occupancy,new_scores,primary_loc,new_quads
 
 
@@ -131,7 +129,7 @@ def track_to_quad(locations,track_occupancy,instance_scores,center_point = CENTE
             new_locations,new_occupancy,new_instance_scores,f_loc,new_quad_array = correct_track(locations,track_occupancy,instance_scores,t,center_point)
             #import pdb;pdb.set_trace()
             all_locations = np.concatenate([all_locations,new_locations],axis=3)
-            all_occupancy = np.concatenate([all_occupancy,new_occupancy],axis=0)
+            all_occupancy = np.concatenate([all_occupancy,new_occupancy],axis=0).astype(bool)
             all_instance_scores = np.concatenate([all_instance_scores,new_instance_scores],axis=1)
 
             all_quad_arrays = np.concatenate([all_quad_arrays,new_quad_array],axis=0)
@@ -255,7 +253,8 @@ if __name__ == "__main__":
 
     print('clearing overlapping tracks')
 ## This actually reshapes locations and track_occupancy
-    locations_1,track_occupancy_1,instance_scores_1 = quadle_neck(np.array(locations),np.array(track_occupancy),instance_scores)
+    locations_1,track_occupancy_1,instance_scores_1 = quadle_neck(np.array(locations),np.array(track_occupancy,dtype=bool),instance_scores)
+    locations_0,track_occupancy_0,instance_scores_0 = locations,track_occupancy,instance_scores
     locations,track_occupancy,instance_scores = locations_1,track_occupancy_1,instance_scores_1
 
     print('running spot filter')
@@ -308,6 +307,8 @@ if __name__ == "__main__":
 #averaged_tracks = np.nanmean(cleaned_tracks,axis=4)
 
 #print(averaged_tracks.shape)
+    import pdb;pdb.set_trace()
+
     fig,ax = plt.subplots()
 
     print('error count:',error_count,'of',n_frames)
@@ -336,8 +337,8 @@ if __name__ == "__main__":
         activities.append(prop_active)
         visible_track = cleaned_tracks[f,:,4][~np.isnan(cleaned_tracks[f,:,4,0])]
 
-        xs = np.abs(visible_track[:,0] - center_point[0]) > center_point[0]/2
-        ys = np.abs(visible_track[:,1] - center_point[1]) > center_point[1]/2
+        xs = np.abs(visible_track[:,0] - center_point[0]) > 100 #center_point[0]/2
+        ys = np.abs(visible_track[:,1] - center_point[1]) > 200 #center_point[1]/2
         coward_count = np.sum(np.logical_and(xs,ys))
         coward_ratio = coward_count / len(visible_track)
         corner_ratios.append(coward_ratio)
@@ -345,7 +346,7 @@ if __name__ == "__main__":
     print(':: STATS ::')
     print('proportion visible:',proportion_visible)
     print('mean velocity:',velocities)
-    #print('proportion away from edge:',center_ratio)
+    print('proportion in corner:',corner_ratios)
 
     if args.visualize:
         fig.show()
@@ -361,7 +362,7 @@ if __name__ == "__main__":
             f.write(':: STATS ::')
             f.write('\nproportion visible: ' + str(np.round(proportion_visible,3)))
             f.write('\nmean velocity: ' + str(np.round(velocities,3)))
-            #f.write('\nproportion away from edge: ' + str(np.round(corner_ratios,3)))
+            f.write('\nproportion away from edge: ' + str(np.round(corner_ratios,3)))
         if args.project_csv is not None:
             with open(project_csv,'w') as f:
                 vid_name = in_file.split('/')[-1]
