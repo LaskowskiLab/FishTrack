@@ -127,7 +127,6 @@ def track_to_quad(locations,track_occupancy,instance_scores,center_point = CENTE
 
 ## Note, I am deleting the overlap within the function
             new_locations,new_occupancy,new_instance_scores,f_loc,new_quad_array = correct_track(locations,track_occupancy,instance_scores,t,center_point)
-            #import pdb;pdb.set_trace()
             all_locations = np.concatenate([all_locations,new_locations],axis=3)
             all_occupancy = np.concatenate([all_occupancy,new_occupancy],axis=0).astype(bool)
             all_instance_scores = np.concatenate([all_instance_scores,new_instance_scores],axis=1)
@@ -148,22 +147,29 @@ def quadle_neck(locations,track_occupancy,instance_scores):
     track_quad,quad_array,cleaned_data = track_to_quad(locations,track_occupancy,instance_scores) 
     locations,track_occupancy,instance_scores = cleaned_data
     n_tracks = np.shape(locations)[3]
+    #import pdb;pdb.set_trace()
     for t in range(n_tracks): 
         frames = track_occupancy[t] == 1
         overlap_array = quad_array[:,frames] == track_quad[t]
-        competing_ts = np.nansum(overlap_array,axis = 1)
+        competing_ts = np.nansum(overlap_array,axis = 0)
+        #print(competing_ts)
+        if len(competing_ts) == 0: ## This can happen if it was deleted in a prior loop
+            continue
 
-        if np.nansum(competing_ts) > 1:
-            t_score = np.nanmean(instance_scores[:,t])
-            for t_ in np.argwhere(competing_ts > 1)[:,0]:
-                score = np.nanmean(instance_scores[:,t_])
-                if score > t_score:
-                    track_occupancy[t_] = 0 ## or nan?
-                    #track_occupancy[t_,frames] = 0 ## or nan?
-                elif score < t_score: ## if that track is better, delete this I guess? 
-                    track_occupancy[t] = 0
-                    #track_occupancy[t_,frames] = 0 ## or nan?
-                    break
+        if np.nanmax(competing_ts) > 1:
+            for f in np.argwhere(competing_ts > 1)[:,0]:
+                t_score = instance_scores[f,t]
+                competitors = np.argwhere(overlap_array[:,f])[:,0]
+                for c_ in competitors:
+                    if c_ == t:
+                        continue
+                    c_score = np.nanmean(instance_scores[:,c_])
+                    if t_score > c_score:
+                        track_occupancy[c_,f] = 0 ## or nan?
+                        #track_occupancy[t_,frames] = 0 ## or nan?
+                    elif t_score < c_score: ## if that track is better, delete this I guess? 
+                        track_occupancy[t,f] = 0
+                        #track_occupancy[t_,frames] = 0 ## or nan?
     return locations,track_occupancy,instance_scores
 
 ## Only keep frames that overlap with background subtraction.
@@ -307,7 +313,6 @@ if __name__ == "__main__":
 #averaged_tracks = np.nanmean(cleaned_tracks,axis=4)
 
 #print(averaged_tracks.shape)
-    import pdb;pdb.set_trace()
 
     fig,ax = plt.subplots()
 
@@ -364,16 +369,18 @@ if __name__ == "__main__":
             f.write('\nmean velocity: ' + str(np.round(velocities,3)))
             f.write('\nproportion away from edge: ' + str(np.round(corner_ratios,3)))
         if args.project_csv is not None:
-            with open(project_csv,'w') as f:
-                vid_name = in_file.split('/')[-1]
+            import pdb;pdb.set_trace()
+            with open(args.project_csv,'w') as f:
+                h5_name = args.in_file.split('/')[-1]
+                base_name = h5_name.split('.')[0]
                 delim = ','
-                for f in range(n_fish):
-                    quad = str(get_quadrant(np.nanmedian(cleaned_med[f],axis=0)))
-                    prop_visible = str(round(proportion_visible[f],3))
-                    vel = str(round(velocities[f],3))
-                    activity = str(round(prop_moving[f],3))
-                    boldness = str(round(1-corner_ratio[f],3))
-                    f_line = delim.join(vid_name,quad,prop_visible,vel,activity,boldness)
+                for f_ in range(n_fish):
+                    quad = str(get_quadrant(np.nanmedian(cleaned_med[f_],axis=0)))
+                    prop_visible = str(round(proportion_visible[f_],3))
+                    vel = str(round(velocities[f_],3))
+                    activity = str(round(activities[f_],3))
+                    boldness = str(round(1-corner_ratios[f_],3))
+                    f_line = delim.join([base_name,quad,prop_visible,vel,activity,boldness])
                     f.write(f_line + '\n')
         columns = ['Frame','Fish','x','y']
         frame_list,fish_list,x_list,y_list = [],[],[],[]
