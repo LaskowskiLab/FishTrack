@@ -51,10 +51,11 @@ rule crop_video:
     output: temporary("snake/crops/{video}.crop.mp4")
     input:  "snake/videos/{video}.mp4" 
     threads: 2
+    conda: "tracking"
     params:
         log = "snake/results/logs/{video}.log"
-    run:
-        shell("python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log}")
+    shell:
+        "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log}"
         #shell("echo python crop_by_tags.py -i {input} -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log}")
         #shell("touch snake/crops/{wildcards.video}.crop.mp4")
 
@@ -143,13 +144,14 @@ rule process_h5:
         "snake/results/txt/{video}.txt",
     input:  "snake/h5/{video}.h5"
     priority: 3
+    conda: "tracking"
     log:
     params:
         center = CENTER_DICT,
         spots = "snake/spots/{wildcards.video}.spots.mp4",
         log = "snake/results/logs/{video}.log"
-    run:
-        shell("python /home/ammon/Documents/Scripts/FishTrack/src/process_h5.py -i {input} -o snake/results/csv/{wildcards.video}.csv -p snake/results/jay.adults.csv -x {params.center} 2> {params.log}")
+    shell:
+        "python /home/ammon/Documents/Scripts/FishTrack/src/process_h5.py -i {input} -o snake/results/csv/{wildcards.video}.csv -p snake/results/jay.adults.csv -x {params.center} 2> {params.log}"
         #shell("echo python process_h5.py -i {input} -x params.center;")
         #shell("touch snake/results/csv/{wildcards.video}.csv")
         #shell("touch snake/results/txt/{wildcards.video}.txt")
