@@ -370,7 +370,7 @@ if __name__ == "__main__":
             f.write('\nproportion away from edge: ' + str(np.round(corner_ratios,3)))
         if args.project_csv is not None:
             import pdb;pdb.set_trace()
-            with open(args.project_csv,'w') as f:
+            with open(args.project_csv,'a') as f:
                 h5_name = args.in_file.split('/')[-1]
                 base_name = h5_name.split('.')[0]
                 delim = ','
