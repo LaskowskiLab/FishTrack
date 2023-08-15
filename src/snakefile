@@ -103,8 +103,8 @@ rule convert_h5:
     conda:
         "sleap"
     shell:
-        #"sleap-convert -i {input} --format analysis -o ../working_dir/snake/h5/{wildcards.video}.h5"
-        "echo sleap-convert -i {input} --format analysis -o ../working_dir/snake/h5/{wildcards.video}.h5"
+        #"sleap-convert {input} --format analysis -o ../working_dir/snake/h5/{wildcards.video}.h5"
+        "echo sleap-convert {input} --format analysis -o ../working_dir/snake/h5/{wildcards.video}.h5"
         "touch ../working_dir/snake/h5/{wildcards.video}.h5"
 
 rule upload_h5:
