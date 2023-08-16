@@ -74,8 +74,8 @@ corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, para
 if args.force_dict:
     x,y,out_w,out_h = crop_dict[args.id]
 elif len(corners) <= 2:
-    print(crop_dict.keys())
-    print(args.id)
+    #print(crop_dict.keys())
+    #print(args.id)
     if args.id in crop_dict.keys():
         print('Warning: crop tags could not be identified, checking for hard coded crop')
         x,y,out_w,out_h = crop_dict[args.id]
