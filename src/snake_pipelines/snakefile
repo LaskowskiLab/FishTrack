@@ -3,8 +3,8 @@ import sys
 #VIDEO_LIST = "path_lists/jay.adults.videos.txt"
 #PATH_LIST = 'path_lists/jay.adults.paths.txt'
 
-VIDEO_LIST = "path_lists/jay.adults.videos.short.txt"
-PATH_LIST = 'path_lists/jay.adults.paths.short.txt'
+VIDEO_LIST = "path_lists/jay.adults.videos.txt"
+PATH_LIST = 'path_lists/jay.adults.paths.txt'
 
 with open(VIDEO_LIST) as f:
     VIDEOS = f.read().splitlines()
@@ -26,12 +26,12 @@ shell("conda config --add envs_dirs /home/ammon/anaconda3/envs")
 
 rule all:
     input:
-        expand("snake/videos/{video}.mp4",video=VIDEOS),
-        expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
-        expand("snake/spots/{video}.spot.mp4",video=VIDEOS),
-        expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
-        expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
-        expand("snake/h5/{video}.h5",video=VIDEOS),
+        #expand("snake/videos/{video}.mp4",video=VIDEOS),
+        #expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
+        #expand("snake/spots/{video}.spot.mp4",video=VIDEOS),
+        #expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
+        #expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
+        #expand("snake/h5/{video}.h5",video=VIDEOS),
         expand("snake/results/csv/{video}.csv",video=VIDEOS),
         expand("snake/results/txt/{video}.txt",video=VIDEOS),
         #expand("snake/results/logs/{video}.log",video=VIDEOS)
@@ -66,7 +66,7 @@ rule upload_crop:
     output: "snake/results/logs/{video}.crop.log"
     input:  "snake/crops/{video}.crop.mp4"
     resources: bandwidth=1
-    priority: 2
+    priority: 3
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
@@ -92,7 +92,7 @@ rule upload_spot:
     output: "snake/results/logs/{video}.spot.log"
     input:  "snake/spots/{video}.spot.mp4"
     resources: bandwidth=1
-    priority: 2
+    priority: 3
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
@@ -105,7 +105,7 @@ rule inference:
     output: "snake/sleap/{video}.predictions.slp"
     input:  "snake/crops/{video}.crop.mp4"
     resources: gpu=1
-    threads: 8
+    threads: 2
     priority: 10 
     conda:
         "sleap130"
@@ -122,9 +122,8 @@ rule inference:
 rule tidy_slp:
     output: temporary("snake/sleap/{video}.predictions.squished.slp")
     input: "snake/sleap/{video}.predictions.slp"
-    threads: 4
+    threads: 2
     priority: 11
-    resources: gpu=1 
     params:
         log = "snake/results/logs/{video}.log"
     conda: "sleap130"
@@ -134,7 +133,7 @@ rule tidy_slp:
 rule convert_h5:
     output: temporary("snake/h5/{video}.h5")
     input:  "snake/sleap/{video}.predictions.squished.slp"
-    priority: 1
+    priority: 12
     params:
         log = "snake/results/logs/{video}.log"
     conda:
