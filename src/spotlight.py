@@ -24,10 +24,10 @@ def make_spots(input_video,output_video):
     count = 0
 # Read until video is completed
     while(cap.isOpened()):
-      # Capture frame-by-frame
-        if count % 100 == 0:
-            print('frame:',count)
-            print(time.time() - start)
+        # Capture frame-by-frame
+        #if count % 100 == 0:
+        #    #print('frame:',count)
+        #    #print(time.time() - start)
         count += 1
         ret, frame = cap.read()
         if not ret:
