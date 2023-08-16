@@ -30,6 +30,7 @@ rule all:
         expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
         expand("snake/spots/{video}.spot.mp4",video=VIDEOS),
         expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
+        expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
         expand("snake/h5/{video}.h5",video=VIDEOS),
         expand("snake/results/csv/{video}.csv",video=VIDEOS),
         expand("snake/results/txt/{video}.txt",video=VIDEOS),
@@ -41,6 +42,7 @@ rule copy_video:
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
     resources: bandwidth=1 
+    priority: 0
     run:
         shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/ 2> {params.log}")
         #shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4 -P")
@@ -50,6 +52,7 @@ rule copy_video:
 rule crop_video:
     output: temporary("snake/crops/{video}.crop.mp4")
     input:  "snake/videos/{video}.mp4" 
+    priority: 9
     threads: 2
     conda: "tracking"
     params:
@@ -63,6 +66,7 @@ rule upload_crop:
     output: "snake/results/logs/{video}.crop.log"
     input:  "snake/crops/{video}.crop.mp4"
     resources: bandwidth=1
+    priority: 2
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
@@ -73,6 +77,7 @@ rule upload_crop:
 rule spot_video:
     output: temporary("snake/spots/{video}.spot.mp4")
     input:  "snake/crops/{video}.crop.mp4"
+    priority: 2
     threads: 2
     conda:
         "tracking"
@@ -87,6 +92,7 @@ rule upload_spot:
     output: "snake/results/logs/{video}.spot.log"
     input:  "snake/spots/{video}.spot.mp4"
     resources: bandwidth=1
+    priority: 2
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
@@ -96,10 +102,11 @@ rule upload_spot:
         #shell("echo wildcards.video > snake/results/logs/{wildcards.video}.spot.log")
 
 rule inference:
-    output: temporary("snake/sleap/{video}.predictions.slp")
+    output: "snake/sleap/{video}.predictions.slp"
     input:  "snake/crops/{video}.crop.mp4"
     resources: gpu=1
-    threads: 12
+    threads: 8
+    priority: 10 
     conda:
         "sleap130"
     params:
@@ -108,13 +115,25 @@ rule inference:
         log = "snake/results/logs/{video}.log"
     shell:
         #shell("sleap-track -i {input} ....")
-        "sleap-track -m params.centered -m params.centroid --peak_threshold 0.4 -tracking.tracker simple --tracking.similarity centroid --tracking.track_window 1 {input} -o snake/sleap/{wildcards.video}.predictions.slp 2> {params.log}"
+        "sleap-track -m {params.centered} -m {params.centroid} --peak_threshold 0.4 --tracking.tracker simple --tracking.similarity centroid --tracking.track_window 5 {input} -o snake/sleap/{wildcards.video}.predictions.slp 2> {params.log}"
         #"echo sleap-track -m params.centered -m params.centroid --peak_threshold 0.4 {input} -o snake/sleap/{wildcards.video}.predictions.slp"
         #"touch snake/sleap/{wildcards.video}.predictions.slp"
 
+rule tidy_slp:
+    output: temporary("snake/sleap/{video}.predictions.squished.slp")
+    input: "snake/sleap/{video}.predictions.slp"
+    threads: 4
+    priority: 11
+    resources: gpu=1 
+    params:
+        log = "snake/results/logs/{video}.log"
+    conda: "sleap130"
+    shell:
+        "python /home/ammon/Documents/Scripts/FishTrack/src/squish_sleap.py {input} 2> {params.log}"
+
 rule convert_h5:
     output: temporary("snake/h5/{video}.h5")
-    input:  "snake/sleap/{video}.predictions.slp"
+    input:  "snake/sleap/{video}.predictions.squished.slp"
     priority: 1
     params:
         log = "snake/results/logs/{video}.log"
