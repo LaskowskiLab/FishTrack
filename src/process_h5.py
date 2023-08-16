@@ -10,8 +10,8 @@ import argparse
 
 from matplotlib import pyplot as plt
 
-#CENTER = [349,425]
-CENTER = [400,450]
+CENTER = [349,425]
+#CENTER = [400,450]
 
 ## Code which takes .h5 files (output from SLEAP) and processes it to usable data
 
@@ -69,7 +69,7 @@ def correct_track(locations,track_occupancy,instance_scores,t,center_point=CENTE
 
     track = np.nanmedian(locations[:,:,:,t],axis=1)
     med_point = np.nanmedian(track,axis=0)
-    primary_loc = get_quadrant(med_point)
+    primary_loc = get_quadrant(med_point,center_point)
     new_occupancy = np.zeros([4,n_frames])
     new_scores = np.full([n_frames,4],np.nan)
 
@@ -77,7 +77,7 @@ def correct_track(locations,track_occupancy,instance_scores,t,center_point=CENTE
 
     new_locations = np.full([n_frames,n_nodes,2,4],np.nan)
     for f_ in np.argwhere(frames)[:,0]:
-        f_loc = get_quadrant(track[f_,:])
+        f_loc = get_quadrant(track[f_,:],center_point)
         if f_loc != primary_loc:
             new_quads[f_loc,f_] = f_loc
             new_occupancy[f_loc,f_] = 1
@@ -117,8 +117,8 @@ def track_to_quad(locations,track_occupancy,instance_scores,center_point = CENTE
         max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
         min_points = np.nanmin(med_track,0)
 
-        loc_min = get_quadrant(min_points)
-        loc_max = get_quadrant(max_points)
+        loc_min = get_quadrant(min_points,center_point)
+        loc_max = get_quadrant(max_points,center_point)
 
         if loc_min == loc_max:
             f_loc = loc_min
@@ -143,8 +143,8 @@ def track_to_quad(locations,track_occupancy,instance_scores,center_point = CENTE
     return track_quad, quad_array,[all_locations,all_occupancy,all_instance_scores]
 
 ## You know, like a quadrant bottle neck
-def quadle_neck(locations,track_occupancy,instance_scores):
-    track_quad,quad_array,cleaned_data = track_to_quad(locations,track_occupancy,instance_scores) 
+def quadle_neck(locations,track_occupancy,instance_scores,center_point = CENTER):
+    track_quad,quad_array,cleaned_data = track_to_quad(locations,track_occupancy,instance_scores,center_point) 
     locations,track_occupancy,instance_scores = cleaned_data
     n_tracks = np.shape(locations)[3]
     #import pdb;pdb.set_trace()
@@ -228,8 +228,8 @@ if __name__ == "__main__":
         n_fish = args.n_fish
 
     center_point = None
-    if args.center_list == None or args.id == None:
-        print('no center point given..')
+    if args.center_list == None:
+        print('no center dict given..')
         try:
             print('trying to check from h5 source video:')
             cap = cv2.VideoCapture(video_path)
@@ -242,14 +242,16 @@ if __name__ == "__main__":
             print('Nevermind, using default:',CENTER)
             center_point = CENTER
     else:
+        print('crop dict found, checking for key')
         crop_dict = {}
         with open(args.center_list) as f:
             for line in f:
                 k,cs = line.split()
-                if k == args.id:
+                if k == args.id or k in args.in_file:
                     center_point = [int(c) for c in cs.split(',')]
                     break
-    print(center_point)
+                else:
+                    center_point = CENTER   
     CENTER = center_point
 
     print('using center point:',center_point)
@@ -259,7 +261,7 @@ if __name__ == "__main__":
 
     print('clearing overlapping tracks')
 ## This actually reshapes locations and track_occupancy
-    locations_1,track_occupancy_1,instance_scores_1 = quadle_neck(np.array(locations),np.array(track_occupancy,dtype=bool),instance_scores)
+    locations_1,track_occupancy_1,instance_scores_1 = quadle_neck(np.array(locations),np.array(track_occupancy,dtype=bool),instance_scores,center_point)
     locations_0,track_occupancy_0,instance_scores_0 = locations,track_occupancy,instance_scores
     locations,track_occupancy,instance_scores = locations_1,track_occupancy_1,instance_scores_1
 
@@ -289,8 +291,8 @@ if __name__ == "__main__":
         max_points = np.nanmax(med_track,0) ## get x,y mead of tracklet 
         min_points = np.nanmin(med_track,0)
 
-        loc_min = get_quadrant(min_points)
-        loc_max = get_quadrant(max_points)
+        loc_min = get_quadrant(min_points,center_point)
+        loc_max = get_quadrant(max_points,center_point)
 
         #print(min_points,max_points)
         #print(loc_min,loc_max)
@@ -329,7 +331,7 @@ if __name__ == "__main__":
     for f in range(n_fish):
         #ax.scatter(cleaned_tracks[f,:,4,0],y_max - cleaned_tracks[f,:,4,1],alpha=.05,marker='.')
         #ax.scatter(cleaned_med[f,:,0],y_max - cleaned_med[f,:,1],alpha=.05,marker='.')
-        ax.scatter(cleaned_med[f,:,0],cleaned_med[f,:,1],alpha=.1,marker='.')
+        ax.scatter(cleaned_med[f,:,0],cleaned_med[f,:,1],alpha=.01,marker='.')
         n_vis = np.sum(~np.isnan(cleaned_tracks[f,:,0,0]))
         visible_frames[f] = n_vis
         proportion_visible[f] = n_vis / n_frames
@@ -363,7 +365,7 @@ if __name__ == "__main__":
 
         np.save(out_file.replace('.csv','.npy'),cleaned_tracks)
 
-        with open(out_file.replace('.csv','.txt'),'w') as f:
+        with open(out_file.replace('csv','txt'),'w') as f:
             f.write(':: STATS ::')
             f.write('\nproportion visible: ' + str(np.round(proportion_visible,3)))
             f.write('\nmean velocity: ' + str(np.round(velocities,3)))
@@ -375,7 +377,7 @@ if __name__ == "__main__":
                 base_name = h5_name.split('.')[0]
                 delim = ','
                 for f_ in range(n_fish):
-                    quad = str(get_quadrant(np.nanmedian(cleaned_med[f_],axis=0)))
+                    quad = str(get_quadrant(np.nanmedian(cleaned_med[f_],axis=0),center_point))
                     prop_visible = str(round(proportion_visible[f_],3))
                     vel = str(round(velocities[f_],3))
                     activity = str(round(activities[f_],3))
