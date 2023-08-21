@@ -106,7 +106,7 @@ rule inference:
     input:  "snake/crops/{video}.crop.mp4"
     resources: gpu=1
     threads: 2
-    priority: 10 
+    priority: 100
     conda:
         "sleap130"
     params:
