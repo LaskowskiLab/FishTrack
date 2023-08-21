@@ -65,12 +65,17 @@ else:
     ret, frame = screen_cap.read()
 
 #frame = cv2.imread("/Users/Ammon/Downloads/0CD80CB1-ADCB-4465-8389-62F9DF335CB7.JPG")
-gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+if ret is True:
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 ## Find tags
-aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
-parameters =  cv2.aruco.DetectorParameters_create()
-corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+    parameters =  cv2.aruco.DetectorParameters_create()
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+else:
+    print('First frame failed, going to just default to the dict')
+    args.force_dict = True
+
 if args.force_dict:
     x,y,out_w,out_h = crop_dict[args.id]
 elif len(corners) <= 2:
