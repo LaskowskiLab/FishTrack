@@ -81,6 +81,30 @@ def interp_track(a):
     y[nans]=np.interp(x(nans),x(~nans),y[~nans])
     return y
 
+## Finds and deletes peaks
+def clear_peaks(a,bins=50,stds=1):
+    if len(a.shape) == 3: ## In case you pass all the nodes
+        a = np.nanmean(a,axis=1)
+    a = np.array(a)
+    a_num = np.nan_to_num(a)
+## will need these in a bit
+    a_x,a_y = a_num[:,0],a_num[:,1]
+
+    good_points = ~np.isnan(a[:,0]) & ~np.isnan(a[:,1])
+    b = a[good_points]
+    counts,xedges,yedges = np.histogram2d(b[:,0],b[:,1],bins=bins)
+    peaks = np.argwhere(counts > counts.mean() + counts.std() * stds) 
+    for p in peaks:
+        x_,y_ = p
+        x0,x1 = xedges[x_],xedges[x_ + 1]
+        y0,y1 = yedges[y_],yedges[y_ + 1]
+        
+        bad_x = (a_x >= x0) & (a_x <= x1)
+        bad_y = (a_y >= y0) & (a_y <= y1)
+        bad_points = bad_x & bad_y
+        a[bad_points] = np.nan
+    return a
+
 if __name__ == '__main__':
     args = build_parse()
     file_object = np.load(args.input_file)

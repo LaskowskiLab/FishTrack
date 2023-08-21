@@ -11,6 +11,8 @@ import h5py
 
 vid_name = sys.argv[1]
 h5_name = vid_name.replace('.mp4','.analysis.h5')
+#h5_name = sys.argv[2]
+
 #npz_name = npz_name.replace('/babies/singles','/data')
 #file_object = np.load(h5_name)
 #out_file = '/home/ammon/Videos/babies/singles/pi13.2022.10.30.batch.trex.crop_3.tracked.mp4'
@@ -26,6 +28,8 @@ with h5py.File(h5_name, 'r') as f:
     track_occupancy = f['track_occupancy'][:].T
 
 a = locations[:,3,:,0]
+
+
 print(a.shape)
 #import pdb;pdb.set_trace()
 #a[:,1] = 1080 - a[:,1]
