@@ -374,7 +374,7 @@ if __name__ == "__main__":
             #import pdb;pdb.set_trace()
             with open(args.project_csv,'a') as f:
                 h5_name = args.in_file.split('/')[-1]
-                base_name = h5_name.split('.')[0]
+                base_name = h5_name.split('.')[:-1]
                 delim = ','
                 for f_ in range(n_fish):
                     quad = str(get_quadrant(np.nanmedian(cleaned_med[f_],axis=0),center_point))
