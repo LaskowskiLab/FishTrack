@@ -17,6 +17,7 @@ def build_parse():
     parser.add_argument('--visualize','-v',action='store_true',help='Show video?')
     parser.add_argument('--dump','-d',action='store_true',help='Trash output?')
     parser.add_argument('--output','-o',required=False,help='Path to output video')
+    parser.add_argument('--other_track','-b',required=False,help='Second array of tracks to plot, very niche')
     return parser.parse_args()
 
 ## Take an array and clean out single points, then interpolate
@@ -62,15 +63,24 @@ if '.h5' in args.vid_file:
 elif '.npy' in args.tracks:
     a = np.load(args.tracks)
 
-a = np.nanmean(a,axis=2)
-print(a.shape)
-
+if args.other_track is not None:
+    b = np.load(args.other_track)
+else:
+    b = None
 ## Clean up and interpolate tracks
+
+if b is not None:
+    b[np.isnan(b)] = 0
+
+    b = b.reshape([1,len(b),2])
+    b = b.astype(int)
 
 if len(a.shape) == 2:
     n_fish = 1
+    a = a.reshape([1,len(a),2])
 else:
     n_fish = np.shape(a)[0]
+    a = np.nanmean(a,axis=2)
 
 if n_fish > 1:
     for f in range(n_fish):
@@ -108,12 +118,15 @@ while(cap.isOpened()):
             continue
         cor = fish_colors[f]
         cv2.circle(frame,(a[f,t,0],a[f,t,1]),radius=rad,color=cor,thickness=-1)
+
         for l in range(0,min(t,tail_length)):
             r = max(2,rad-l)
             cv2.circle(frame,(a[f,t-l,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1)
+        if b is not None:
+            cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,0,0],thickness=-1)
     if args.visualize:
         cv2.imshow('Overlay',frame)
-        if cv2.waitKey(30) & 0xFF == ord('q'):
+        if cv2.waitKey(3) & 0xFF == ord('q'):
             args.visualize = False
 
     if not args.dump:
