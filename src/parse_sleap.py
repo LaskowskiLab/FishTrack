@@ -109,6 +109,7 @@ def clear_teleports_(a,track_occupancy=None,instance_scores=None,max_distance = 
         start_ = next_
         stop_ = np.argmax(track_occupancy[start_:] == False) + start_
         next_ = np.argmax(track_occupancy[stop_:] == True) + stop_
+        #print(last_,start_,stop_,next_)
         if stop_ == start_ or stop_ == next_:
             break
         if stop_ - start_ < min_track:
@@ -131,12 +132,10 @@ def clear_teleports_(a,track_occupancy=None,instance_scores=None,max_distance = 
             #start_ = next_ ## this is already handled
         else: 
 ## Delete this section
-            #print('killing this one')
-            #print(start_,stop_)
-## Move the pointers
             track_occupancy[start_:stop_] = False
             a[start_:stop_] = np.nan
-            next_ = np.argmax(track_occupancy[last_:] == True) + last_
+## Move the pointers
+            next_ = np.argmax(track_occupancy[last_+1:] == True) + last_+1
         #import pdb;pdb.set_trace()
 # You probably still have the tracks...
     return a,track_occupancy 
