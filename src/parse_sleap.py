@@ -108,9 +108,8 @@ def clear_teleports_(a,track_occupancy=None,instance_scores=None,max_distance = 
 ## Lots of opportunities for indexing errors here...
         start_ = next_
         stop_ = np.argmax(track_occupancy[start_:] == False) + start_
-        stop_check = np.max(track_occupancy[start_:] == False)
         next_ = np.argmax(track_occupancy[stop_:] == True) + stop_
-        if not stop_check:
+        if stop_ == start_ or stop_ == next_:
             break
         if stop_ - start_ < min_track:
             a[start_:stop_] = np.nan
@@ -129,7 +128,7 @@ def clear_teleports_(a,track_occupancy=None,instance_scores=None,max_distance = 
 ## If at least one shift is reasonble, keep going
             #print('this one looks good')
             last_ = stop_-1
-            start_ = next_
+            #start_ = next_ ## this is already handled
         else: 
 ## Delete this section
             #print('killing this one')
