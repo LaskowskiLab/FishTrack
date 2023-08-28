@@ -13,15 +13,11 @@ while True:
         cv2.imshow('Frame',frame)
 
         if cv2.waitKey(5) & 0xFF == ord('q'):
-            if 'y' in input('Happy?'):
-                break
-            else:
-                pass
+            break
 
 cap.release()
 cv2.destroyAllWindows()
 
-"""
 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 fig,ax = plt.subplots()
@@ -30,5 +26,4 @@ fig,ax = plt.subplots()
 ax.imshow(gray)
 
 plt.show()
-"""
 print('Done!')
