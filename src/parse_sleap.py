@@ -164,7 +164,7 @@ def overlay_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
         if len(frames) == 0:
             continue ## this happens when the track is deleted
         if len(frames) < min_track:
-            track_occupancy[frames] = False
+            track_occupancy[t,frames] = False
         track = a[frames,:,t] 
         overlapping_frames = sum_occupancy[frames] > 1
         #import pdb; pdb.set_trace()
