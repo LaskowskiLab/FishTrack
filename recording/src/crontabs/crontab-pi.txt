@@ -20,8 +20,11 @@
 ## Upload video (this also deletes the video from the pi)
 0 20 * * * bash /home/pi/recording/src/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
 
-## Reboot every Sunday (after recordings are done)
-35 18 * * SUN reboot 
+## Reboot every sunday after recordings are done
+35 18 * * SUN /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
+
+## Delete cronlog.log every month
+34 18 1 * * date > cronlog.log
 
 # Deletes any .jpg files older than 5 days (syntax is weird, idk)
 #0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;

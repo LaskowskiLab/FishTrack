@@ -10,7 +10,10 @@
 30 6 * * * bash /home/pi/recording/src/box_checkin.sh
 
 ## Reboot every sunday after recordings are done
-35 18 * * SUN reboot
+35 18 * * SUN /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
+
+## Delete cronlog.log every month
+34 18 1 * * date > cronlog.log
 
 # Deletes any jpgs older than 5 days, doesn't affect videos
 #0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
