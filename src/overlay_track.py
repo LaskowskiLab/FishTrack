@@ -59,6 +59,7 @@ if '.h5' in args.vid_file:
         locations = f['tracks'][:].T
         node_names = [n.decode() for n in f["node_names"][:]]
         track_occupancy = f['track_occupancy'][:].T
+    a = locations ## Really not sure if that works...
 
 elif '.npy' in args.tracks:
     a = np.load(args.tracks)

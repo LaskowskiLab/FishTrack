@@ -140,6 +140,10 @@ def clear_teleports_(a,track_occupancy=None,instance_scores=None,max_distance = 
 # You probably still have the tracks...
     return a,track_occupancy 
 
+## Just another name for overlay tracks, because flatten tracks makes more sense. 
+def flatten_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
+    return overlay_tracks(a,track_occupancy,instance_scores,min_track)
+
 ## Takes Frames x XY x Tracks
 ## Outputs Frames x XY to give you one best track
 def overlay_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
@@ -205,6 +209,41 @@ def interp_track(a):
     nans,x = nan_helper(a)
     y[nans]=np.interp(x(nans),x(~nans),y[~nans])
     return y
+
+## Finds and deletes peaks from entire set
+def clear_peaks_all(a,bins=50,stds=1):
+    if len(a.shape) == 4: ## In case you pass all the nodes
+        a = np.nanmean(a,axis=1)
+    a = np.array(a)
+    a_clean = np.nan_to_num(a)
+## rearrange this to have a long array of x,y pairs
+    a_num = np.moveaxis(a,[1],[2])
+    #a_num = np.nan_to_num(a_num)
+    a_num_2d = np.reshape(a_num,[-1,2])
+
+## will need these in a bit
+    a_x,a_y = a_num[:,:,0],a_num[:,:,1]
+    flat_x,flat_y = a_num_2d[:,0],a_num_2d[:,1]
+
+    good_points = ~np.isnan(flat_x) & ~np.isnan(flat_y)
+    b = a_num_2d[good_points]
+    counts,xedges,yedges = np.histogram2d(b[:,0],b[:,1],bins=bins)
+    peaks = np.argwhere(counts > counts.mean() + counts.std() * stds) 
+## Set a hard threshold
+    MAX_COUNT = 4000
+    hard_peaks = np.argwhere(counts > MAX_COUNT)
+    all_peaks = np.vstack([peaks,hard_peaks])
+    for p in all_peaks:
+        x_,y_ = p
+        x0,x1 = xedges[x_],xedges[x_ + 1]
+        y0,y1 = yedges[y_],yedges[y_ + 1]
+        
+        bad_xspots = np.argwhere((a_x >= x0) & (a_x <= x1))
+        bad_yspots = np.argwhere((a_y >= y0) & (a_y <= y1))
+        bad_spots = bad_xspots & bad_yspots
+        a_num[bad_points] = np.nan
+    a = np.moveaxis(a_num,[2],[1])
+    return a
 
 ## Finds and deletes peaks
 def clear_peaks(a,bins=50,stds=1):
