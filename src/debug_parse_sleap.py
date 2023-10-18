@@ -7,16 +7,15 @@ import parse_sleap
 in_file = './jon_test.h5'
 
 locations,track_occupancy,instance_scores = parse_sleap.read_h5(in_file)
-print(track_occupancy.shape,locations.shape)
 a = np.nanmean(locations,1)
 
 a_trim,track_occupancy_trim = parse_sleap.clear_peaks_all(a,track_occupancy)
 
-b,clean_occupancy = parse_sleap.overlay_tracks(a_trim,track_occupancy_trim,instance_scores,min_track=1)
+b,single_occupancy = parse_sleap.overlay_tracks(a_trim,track_occupancy_trim,instance_scores,min_track=1)
+
+c,clean_occupancy = parse_sleap.clear_teleports_(b,single_occupancy,max_distance = 300,min_track=2)
 
 import pdb;pdb.set_trace()
-c,single_occupancy = parse_sleap.clear_teleports_(b,clean_occupancy,max_distance = 300,min_track=2)
-
 c_ = parse_sleap.clear_peaks(c)
 
 d = np.empty_like(c_)
@@ -38,7 +37,6 @@ ax.plot(c[:,0],alpha=0.5,color='red')
 ax.plot(d[:,0],alpha=0.5,color='black',linestyle=':')
 #plt.show()
 
-print(b.shape)
 np.save('test_b.npy',b)
 np.save('test_c.npy',c)
 np.save('test_d.npy',d)
