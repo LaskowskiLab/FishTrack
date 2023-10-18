@@ -194,7 +194,8 @@ def overlay_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
         else:
             track = a[frames,:,t]
             single_track[frames] = track
-    return single_track,track_occupancy
+    single_occupancy = np.max(track_occupancy,0)
+    return single_track,single_occupancy
 
 ## Same thing, but for a tank divided in quadrants
 def overlay_tracks_quad(a,track_occupancy,instance_scores,center_point):
@@ -238,12 +239,12 @@ def clear_peaks_all(a,track_occupancy,bins=50,stds=1):
         x0,x1 = xedges[x_],xedges[x_ + 1]
         y0,y1 = yedges[y_],yedges[y_ + 1]
         
-        bad_xspots = np.argwhere((a_x >= x0) & (a_x <= x1))
-        bad_yspots = np.argwhere((a_y >= y0) & (a_y <= y1))
+        #bad_xspots = np.argwhere((a_x >= x0) & (a_x <= x1))
+        #bad_yspots = np.argwhere((a_y >= y0) & (a_y <= y1))
         bad_spots = np.argwhere((a_y >= y0) & (a_y <= y1) & (a_x >= x0) & (a_x <= x1))
 
         #bad_spots = bad_xspots & bad_yspots
-        a_num[bad_spots] = np.nan
+        a_num[bad_spots[:,0],bad_spots[:,1]] = np.nan
     a = np.moveaxis(a_num,[2],[1])
     track_occupancy = np.array(track_occupancy)
     track_occupancy[bad_spots[:,1],bad_spots[:,0]] = 0
