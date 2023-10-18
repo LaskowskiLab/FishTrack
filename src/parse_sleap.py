@@ -211,7 +211,7 @@ def interp_track(a):
     return y
 
 ## Finds and deletes peaks from entire set
-def clear_peaks_all(a,bins=50,stds=1):
+def clear_peaks_all(a,track_occupancy,bins=50,stds=1):
     if len(a.shape) == 4: ## In case you pass all the nodes
         a = np.nanmean(a,axis=1)
     a = np.array(a)
@@ -240,10 +240,14 @@ def clear_peaks_all(a,bins=50,stds=1):
         
         bad_xspots = np.argwhere((a_x >= x0) & (a_x <= x1))
         bad_yspots = np.argwhere((a_y >= y0) & (a_y <= y1))
-        bad_spots = bad_xspots & bad_yspots
-        a_num[bad_points] = np.nan
+        bad_spots = np.argwhere((a_y >= y0) & (a_y <= y1) & (a_x >= x0) & (a_x <= x1))
+
+        #bad_spots = bad_xspots & bad_yspots
+        a_num[bad_spots] = np.nan
     a = np.moveaxis(a_num,[2],[1])
-    return a
+    track_occupancy = np.array(track_occupancy)
+    track_occupancy[bad_spots[:,1],bad_spots[:,0]] = 0
+    return a,track_occupancy
 
 ## Finds and deletes peaks
 def clear_peaks(a,bins=50,stds=1):
