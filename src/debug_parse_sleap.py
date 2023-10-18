@@ -35,7 +35,7 @@ ax.plot(b[:,0],alpha=0.5,color='tab:blue')
 #ax.plot(simple_a,alpha=0.5)
 ax.plot(c[:,0],alpha=0.5,color='red')
 ax.plot(d[:,0],alpha=0.5,color='black',linestyle=':')
-#plt.show()
+plt.show()
 
 np.save('test_b.npy',b)
 np.save('test_c.npy',c)
