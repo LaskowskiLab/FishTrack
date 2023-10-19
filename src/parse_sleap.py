@@ -61,6 +61,38 @@ def plot_array(pos_array):
     plt.gca().invert_yaxis()
     return fig,ax
 
+def read_clean_h5(in_file):
+    locations,track_occupancy,instance_scores = read_h5(in_file)
+    return clean_track(locations,track_occupancy,instance_scores)
+
+## Take a full, raw list of tracks, convert it to cleaned, single track
+## This assumes a single fish in a large tank
+def clean_track(locations,track_occupancy = None,instance_scores=None,stds=3,min_track=2,max_speed = 200):
+    all_tracks = np.nanmean(locations,1)
+    if track_occupancy is None:
+        track_occupancy = (1- np.isnan(all_tracks[:,0]).T).astype(bool)
+    else:
+        track_occupancy = np.array(track_occupancy)
+
+    if len(np.shape(all_tracks)) == 4:
+        all_tracks = np.nanmean(all_tracks,axis=1) ## compress along nodes if needed
+    else:
+        all_tracks = np.array(all_tracks)
+
+    trimmed_tracks,track_occupancy_trim = clear_peaks_all(all_tracks,track_occupancy,plot_me=False,stds=3)
+
+    single_track,single_occupancy = overlay_tracks(trimmed_tracks,track_occupancy_trim,instance_scores,min_track=2)
+
+    slowed_track = clear_superspeed(single_track,max_speed=200)
+
+    clean_track,clean_occupancy = clear_teleports_(slowed_track,max_distance = 300,min_track=2)
+
+    full_track = np.empty_like(clean_track)
+    full_track[:,0] = interp_track(clean_track[:,0])
+    full_track[:,1] = interp_track(clean_track[:,1])
+    return full_track,clean_occupancy
+
+
 def clear_lone_points(a):
     a = np.array(a)
     y = np.array(a[1:-1])
@@ -73,7 +105,7 @@ def clear_lone_points(a):
     return a
 
 ## Takes Frames x XY track
-def clear_teleports(a,max_speed = 500):
+def clear_superspeed(a,max_speed = 500):
     a = np.array(a)
     dx = np.abs(np.diff(a[:,0],prepend=0))
     dy = np.abs(np.diff(a[:,1],prepend=0))
@@ -146,6 +178,8 @@ def flatten_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
 
 ## Takes Frames x XY x Tracks
 ## Outputs Frames x XY to give you one best track
+## The only "smart" thing this does is settles conflicts based on prediction score
+
 def overlay_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
     if track_occupancy is None:
         track_occupancy = (1- np.isnan(a[:,0]).T).astype(bool)
@@ -166,7 +200,7 @@ def overlay_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
     for t in range(n_tracks):
         frames = track_occupancy[t] == True
         if len(frames) == 0:
-            continue ## this happens when the track is deleted
+            continue ## this happens when the track is deleted earlier
         if len(frames) < min_track:
             track_occupancy[t,frames] = False
         track = a[frames,:,t] 
@@ -227,17 +261,20 @@ def clear_peaks_all(a,track_occupancy,bins=50,stds=1,plot_me=False):
     a_x,a_y = a_num[:,:,0],a_num[:,:,1]
     flat_x,flat_y = a_num_2d[:,0],a_num_2d[:,1]
 
+    MAX_COUNT = 4000
     good_points = ~np.isnan(flat_x) & ~np.isnan(flat_y)
     b = a_num_2d[good_points]
     counts,xedges,yedges = np.histogram2d(b[:,0],b[:,1],bins=bins)
-    peaks = np.argwhere(counts > counts.mean() + counts.std() * stds) 
+    #import pdb;pdb.set_trace()
+    sub_counts = counts[counts < MAX_COUNT]
+    peaks = np.argwhere(counts > sub_counts.mean() + sub_counts.std() * stds) 
 ## Set a hard threshold
-    MAX_COUNT = 4000
-    hard_peaks = np.argwhere(counts > MAX_COUNT)
+    hard_peaks = np.argwhere(counts >= MAX_COUNT)
     all_peaks = np.vstack([peaks,hard_peaks])
+    #all_peaks = hard_peaks
 ## Visualize the density, and which ones are clipped
     if plot_me:
-        print(counts.mean() + counts.std()*stds)
+        #print(counts.mean() + counts.std()*stds)
         fig,(ax1,ax2) = plt.subplots(2)
         ax1.imshow(counts,vmax=1000)
         ax1.scatter(peaks[:,1],peaks[:,0],color='pink',alpha=0.5,marker='.')
@@ -253,7 +290,7 @@ def clear_peaks_all(a,track_occupancy,bins=50,stds=1,plot_me=False):
         #bad_xspots = np.argwhere((a_x >= x0) & (a_x <= x1))
         #bad_yspots = np.argwhere((a_y >= y0) & (a_y <= y1))
         bad_spots = np.argwhere((a_y >= y0) & (a_y <= y1) & (a_x >= x0) & (a_x <= x1))
-        print(bad_spots)
+        #print(bad_spots)
         #bad_spots = bad_xspots & bad_yspots
         a_num[bad_spots[:,0],bad_spots[:,1]] = np.nan
         track_occupancy[bad_spots[:,1],bad_spots[:,0]] = 0
@@ -267,7 +304,7 @@ def clear_peaks_all(a,track_occupancy,bins=50,stds=1,plot_me=False):
         plt.show()
 
     a = np.moveaxis(a_num,[2],[1])
-    import pdb;pdb.set_trace()
+    #import pdb;pdb.set_trace()
     return a,track_occupancy
 
 ## Finds and deletes peaks
@@ -335,3 +372,5 @@ if __name__ == '__main__':
             plt.show()
         if args.saveplot:
             plt.savefig(out_name + '.png',dpi=300)
+
+
