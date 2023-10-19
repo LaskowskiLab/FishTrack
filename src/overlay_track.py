@@ -101,7 +101,7 @@ a = np.clip(a,0,max(frame_width,frame_height))
 if not args.dump:
     out = cv2.VideoWriter(args.output,fourcc,fps, (frame_width,frame_height),isColor=True)
 
-fish_colors = [(0,0,255),(255,255,0),(0,255,255),(0,255,0)]
+fish_colors = [(0,0,255),(255,255,0),(0,255,255),(255,0,255)]
 tail_length = 10
 
 t=0
@@ -124,10 +124,10 @@ while(cap.isOpened()):
             r = max(2,rad-l)
             cv2.circle(frame,(a[f,t-l,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1)
         if b is not None:
-            cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,0,0],thickness=-1)
+            cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,255,0],thickness=-1)
     if args.visualize:
         cv2.imshow('Overlay',frame)
-        if cv2.waitKey(3) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             args.visualize = False
 
     if not args.dump:

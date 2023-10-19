@@ -212,11 +212,12 @@ def interp_track(a):
     return y
 
 ## Finds and deletes peaks from entire set
-def clear_peaks_all(a,track_occupancy,bins=50,stds=1):
+def clear_peaks_all(a,track_occupancy,bins=50,stds=1,plot_me=False):
+    track_occupancy = np.array(track_occupancy)
     if len(a.shape) == 4: ## In case you pass all the nodes
         a = np.nanmean(a,axis=1)
     a = np.array(a)
-    a_clean = np.nan_to_num(a)
+    #a_clean = np.nan_to_num(a)
 ## rearrange this to have a long array of x,y pairs
     a_num = np.moveaxis(a,[1],[2])
     #a_num = np.nan_to_num(a_num)
@@ -234,6 +235,16 @@ def clear_peaks_all(a,track_occupancy,bins=50,stds=1):
     MAX_COUNT = 4000
     hard_peaks = np.argwhere(counts > MAX_COUNT)
     all_peaks = np.vstack([peaks,hard_peaks])
+## Visualize the density, and which ones are clipped
+    if plot_me:
+        print(counts.mean() + counts.std()*stds)
+        fig,(ax1,ax2) = plt.subplots(2)
+        ax1.imshow(counts,vmax=1000)
+        ax1.scatter(peaks[:,1],peaks[:,0],color='pink',alpha=0.5,marker='.')
+        ax1.scatter(hard_peaks[:,1],hard_peaks[:,0],color='red',alpha=0.5,marker=',')
+        #ax1.set_xticklabels(xedges)
+        #ax1.set_yticklabels(yedges)
+
     for p in all_peaks:
         x_,y_ = p
         x0,x1 = xedges[x_],xedges[x_ + 1]
@@ -242,12 +253,21 @@ def clear_peaks_all(a,track_occupancy,bins=50,stds=1):
         #bad_xspots = np.argwhere((a_x >= x0) & (a_x <= x1))
         #bad_yspots = np.argwhere((a_y >= y0) & (a_y <= y1))
         bad_spots = np.argwhere((a_y >= y0) & (a_y <= y1) & (a_x >= x0) & (a_x <= x1))
-
+        print(bad_spots)
         #bad_spots = bad_xspots & bad_yspots
         a_num[bad_spots[:,0],bad_spots[:,1]] = np.nan
+        track_occupancy[bad_spots[:,1],bad_spots[:,0]] = 0
+    if plot_me:
+        
+        d = np.reshape(a_num,[-1,2])
+        good_ds = ~np.isnan(d[:,0])
+        d = d[good_ds]
+        new_counts,xedges,yedges = np.histogram2d(d[:,0],d[:,1],bins=bins)
+        ax2.imshow(new_counts)
+        plt.show()
+
     a = np.moveaxis(a_num,[2],[1])
-    track_occupancy = np.array(track_occupancy)
-    track_occupancy[bad_spots[:,1],bad_spots[:,0]] = 0
+    import pdb;pdb.set_trace()
     return a,track_occupancy
 
 ## Finds and deletes peaks
