@@ -6,8 +6,8 @@ n_hours=${1-12}
 n_minutes=${2-60}
 f_rate=${3-1}
 
-if [ -f "/home/pi/recording/src/suffix.txt" ]; then
-    suffix=$(cat ~/recording/src/suffix.txt)
+if [ -f "/home/pi/recording/suffix.txt" ]; then
+    suffix=$(cat ~/recording/suffix.txt)
 else
     suffix='rogue'    
 fi
