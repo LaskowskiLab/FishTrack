@@ -144,15 +144,9 @@ if __name__ == "__main__":
         output_video_path = sys.argv[2]
     else:
         output_video_path = "./speedtest3.mp4"
-    #detections = make_spots(input_video_path,output_video_path)
-    detections = np.load('./example_detections.npy')
+    detections = make_spots(input_video_path,output_video_path)
+    #detections = np.load('./example_detections.npy')
     flat_detections = clean_detections(detections)
-    #np.save('./example_detections.npy',detections)
-    np.save('./flat_detections.npy',flat_detections)
+    np.save('./example_detections_baby.npy',detections)
+    np.save('./flat_detections_baby.npy',flat_detections)
 
-    from matplotlib import pyplot as plt
-    fig,ax = plt.subplots()
-    ax.plot(flat_detections[0,:,0])
-    plt.show()
-
-    import pdb;pdb.set_trace()
