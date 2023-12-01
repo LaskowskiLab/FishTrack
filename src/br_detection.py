@@ -149,3 +149,10 @@ if __name__ == "__main__":
     flat_detections = clean_detections(detections)
     #np.save('./example_detections.npy',detections)
     np.save('./flat_detections.npy',flat_detections)
+
+    from matplotlib import pyplot as plt
+    fig,ax = plt.subplots()
+    ax.plot(flat_detections[0,:,0])
+    plt.show()
+
+    import pdb;pdb.set_trace()
