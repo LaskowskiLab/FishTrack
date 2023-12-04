@@ -1,6 +1,7 @@
 import cv2,sys
 import time
 import numpy as np
+import parse_sleap
 
 # Create a VideoCapture object and read from input file
 # If the input is the camera, pass 0 instead of the video file name
@@ -75,6 +76,68 @@ def make_spots(input_video,output_video):
 
     return detections
 
+def strip_peaks(detections):
+    a = np.moveaxis(detections,[1],[2])
+    track_occupancy = (1- np.isnan(a[:,0]).T).astype(bool)
+    good_detections,_ = parse_sleap.clear_peaks_all(a,track_occupancy)
+    good_detections = np.moveaxis(good_detections,[1],[2])
+    return good_detections
+
+def split_by_quads(detections,center=None):
+    if center is None:
+        center = np.nanmax(detections,axis=(0,1)) / 2 
+        center = center.astype(int)
+    n_frames,n_tracks = detections.shape[:2]
+    quad_detections = np.full([4,n_frames,n_tracks,2],np.nan)
+    quad_0 = np.argwhere((detections[:,:,0] <= center[0]) & (detections[:,:,1] <= center[1]))
+    quad_1 = np.argwhere((detections[:,:,0] >  center[0]) & (detections[:,:,1] <= center[1]))
+    quad_2 = np.argwhere((detections[:,:,0] <= center[0]) & (detections[:,:,1] >  center[1]))
+    quad_3 = np.argwhere((detections[:,:,0] >  center[0]) & (detections[:,:,1] >  center[1]))
+    quad_detections[0][quad_0] = detections[quad_0]
+    quad_detections[1][quad_1] = detections[quad_1] 
+    quad_detections[2][quad_2] = detections[quad_2]
+    quad_detections[3][quad_3] = detections[quad_3]
+
+    return quad_detections
+
+def flatten_by_quads(quad_detections):
+    n_frames = quad_detections.shape[1]
+    quad_detections_flat = np.full([4,n_frames,2],np.nan)
+
+    for q in range(4):
+        quad_single_track = quad_detections_flat[q]
+        track_occupancy = ~np.isnan(quad_detections[q,:,:,0])
+        frame_occupancy = np.sum(track_occupancy,1)
+        overlapping_frames = frame_occupancy > 1
+        if frame_occupancy[0] == 0:
+            quad_single_track[0] = [0,0]
+        else:
+            quad_single_track[0] = np.nanmean(quad_detections[0],0)
+        last_detection = quad_single_track[0]
+        for f in range(1,n_frames):
+            if frame_occupancy[f] == 0:
+                continue
+            good_detections = quad_detections[q,f][~np.isnan(quad_detections[q,f,:,0])]
+            if frame_occupancy[f] == 1:
+                quad_single_track[f] = good_detections
+            else:
+                distances = np.linalg.norm(good_detections - last_detection)
+                closest_t = np.argmin(distances)
+                quad_single_track[f] = good_detections[closest_t]
+        quad_detections_flat[q] = quad_single_track
+
+    return quad_detections_flat
+
+def clean_detections(detections):
+    print(detections.shape)
+    good_detections = strip_peaks(detections)
+    print(good_detections.shape)
+    quad_detections = split_by_quads(good_detections)
+    print(quad_detections.shape)
+    flat_detections = flatten_by_quads(quad_detections)
+    print(flat_detections.shape)
+    return flat_detections
+
 if __name__ == "__main__":
     input_video_path = sys.argv[1]
     if len(sys.argv) >= 3:
@@ -82,4 +145,8 @@ if __name__ == "__main__":
     else:
         output_video_path = "./speedtest3.mp4"
     detections = make_spots(input_video_path,output_video_path)
-    np.save('./example_detections.npy',detections)
+    #detections = np.load('./example_detections.npy')
+    flat_detections = clean_detections(detections)
+    np.save('./example_detections_baby.npy',detections)
+    np.save('./flat_detections_baby.npy',flat_detections)
+
