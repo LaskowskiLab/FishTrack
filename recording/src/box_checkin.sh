@@ -15,6 +15,7 @@ echo "(a number means it's recording, if there's no number it's not)" >> /home/p
 
 grep 'mmal' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
 grep 'token' /home/pi/recording/cronlog.log | head -1 | grep 'token' | cut -c -52 >> /home/pi/recording/hourly_check.txt
+grep 'tvservice' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
 
 ## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
 rclone copy /home/pi/recording/hourly_check.txt AmazonBox:/pivideos/$pi_name

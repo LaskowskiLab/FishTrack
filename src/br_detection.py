@@ -7,7 +7,7 @@ import parse_sleap
 # If the input is the camera, pass 0 instead of the video file name
 #output_video = ('./test_spots.mp4')
 
-def make_spots(input_video,output_video):
+def make_spots(input_video,output_video,write_video=True):
     cap = cv2.VideoCapture(input_video)
     bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -16,7 +16,8 @@ def make_spots(input_video,output_video):
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_video, fourcc, fps, (frame_width, frame_height), isColor=True)
+    if write_video:
+        out = cv2.VideoWriter(output_video, fourcc, fps, (frame_width, frame_height), isColor=True)
 
 # Check if camera opened successfully
     if (cap.isOpened()== False): 
@@ -63,14 +64,16 @@ def make_spots(input_video,output_video):
         #cv2.imshow('Black',black_background)
         #cv2.imshow('White',fg_mask)
         #out.write(fg_mask)
-        out.write(frame)
+        if write_video:
+            out.write(frame)
 # Press Q on keyboard to  exit
         #if cv2.waitKey(5) & 0xFF == ord('q'):
         #    break
      
 # When everything done, release the video capture object
     cap.release()
-     
+    if write_video:
+        out.release() 
 # Closes all the frames
     cv2.destroyAllWindows()
 
@@ -93,10 +96,10 @@ def split_by_quads(detections,center=None):
     quad_1 = np.argwhere((detections[:,:,0] >  center[0]) & (detections[:,:,1] <= center[1]))
     quad_2 = np.argwhere((detections[:,:,0] <= center[0]) & (detections[:,:,1] >  center[1]))
     quad_3 = np.argwhere((detections[:,:,0] >  center[0]) & (detections[:,:,1] >  center[1]))
-    quad_detections[0][quad_0] = detections[quad_0]
-    quad_detections[1][quad_1] = detections[quad_1] 
-    quad_detections[2][quad_2] = detections[quad_2]
-    quad_detections[3][quad_3] = detections[quad_3]
+    q_indices = [quad_0,quad_1,quad_2,quad_3]
+## This is a bit tricky, argwhere returns a list of index tuples, this takes all of them along the proper axes
+    for q in range(4):
+        quad_detections[q,q_indices[q][:,0],q_indices[q][:,1]] = detections[q_indices[q][:,0],q_indices[q][:,1]]
 
     return quad_detections
 
@@ -144,9 +147,9 @@ if __name__ == "__main__":
         output_video_path = sys.argv[2]
     else:
         output_video_path = "./speedtest3.mp4"
-    detections = make_spots(input_video_path,output_video_path)
-    #detections = np.load('./example_detections.npy')
+    #detections = make_spots(input_video_path,output_video_path,write_video=False)
+    detections = np.load('./example_detections_baby.npy')
     flat_detections = clean_detections(detections)
-    np.save('./example_detections_baby.npy',detections)
+    #np.save('./example_detections_baby.npy',detections)
     np.save('./flat_detections_baby.npy',flat_detections)
 

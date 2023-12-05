@@ -10,7 +10,7 @@ def distance_cost(X,Y,axis=None):
     return np.linalg.norm(X-Y,axis=axis)**2 / 1000
 
 # This could probably be optimized further, let's see how quick it is though. 
-def viterbi(track_,track_B,distance_cost=distance_cost):
+def viterbi(track_A,track_B,distance_cost=distance_cost):
     track_0 = np.full_like(track_A,np.nan)
 
     T = len(track_A) 
@@ -42,8 +42,9 @@ def viterbi(track_,track_B,distance_cost=distance_cost):
 
     for t in range(1,T):
 ## Need to calculate transition cost matrix too
-        if t >= 3360:
+        if t >= 14500:
             pass
+            #print(track_A[t],track_B[t])
             #import pdb;pdb.set_trace()
         if False:
             transit_cost_ = np.ones([3,3]) * 50
@@ -78,40 +79,59 @@ def viterbi(track_,track_B,distance_cost=distance_cost):
             path_matrix[t,s] = min_path
             cost_matrix[t,s] = min_cost
 
-    p = np.argmin(cost_matrix[-1]) ## get best path
-    best_path = np.empty(T).astype(int)
-    consensus_path = np.full([T,2],np.nan)
-    best_path[-1] = p
-
+    s_final = np.argmin(cost_matrix[-1]) ## get best state
+    best_state = np.empty(T).astype(int)
+    best_cost = np.zeros(T)
+    consensus_track = np.full([T,2],np.nan)
+    best_state[-1] = s_final
+    best_cost[-1] = cost_matrix[-1,s_final]
+    consensus_track[-1] = tracks[s_final][-1]
 ## Work backwards, starting from the lowest end state, and 
 #    following the best path backwards
     #import pdb;pdb.set_trace()
     for t_ in range(T-1)[::-1]:
-        best_path[t_] = path_matrix[t_,best_path[t_+1]]
-        consensus_path[t_] = tracks[best_path[t_]][t_]
-
-    print(best_path[:100])
-    return consensus_path,best_path
+        best_state[t_] = path_matrix[t_+1,best_state[t_+1]]
+        consensus_track[t_] = tracks[best_state[t_]][t_]
+        best_cost[t_] = cost_matrix[t_,best_state[t_]]
+    cost_diff = np.diff(best_cost,prepend=0)
+    return consensus_track,best_state,cost_diff
 
 if __name__ == '__main__':
 
-    track_A = np.load('testA.npy')
-    track_B = np.load('testB.npy')
-    if len(track_B) != len(track_A):
-        if len(track_A) > len(track_B):
-            track_A = track_A[:len(track_B)]
-        else:
-            track_B = track_B[:len(track_A)]
+    #track_A = np.load('testA.npy')
+    #track_B = np.load('testB.npy')
+    track_A = np.load('../src/flat_detections_baby.npy')
+    track_B = np.load('../working_dir/pi13.2023.10.11.06.00.squished.npy')
 
-    track_A = np.nanmean(track_A,1)
-    track_B = np.nanmean(track_B,1)
-    consensus_path,best_path = viterbi(track_A,track_B)
-    #np.save('testC.npy',consensus_path)
+    print(track_A.shape,track_B.shape)
+
+    #track_A = np.nanmean(track_A,axis=1)
+    #track_B = np.nanmean(track_B,1)
+    #track_A = track_A[0]
+    track_B = np.nanmean(track_B,axis=2)
+
+    print(track_A.shape,track_B.shape)
+
+    if False:
+        if len(track_B) != len(track_A):
+            if len(track_A) > len(track_B):
+                track_A = track_A[:len(track_B)]
+            else:
+                track_B = track_B[:len(track_A)]
+
+    track_C = np.empty_like(track_A)
+    for n in range(4):
+        consensus_track,best_path,cost_diff = viterbi(track_A[n],track_B[n])
+        track_C[n] = consensus_track
+    np.save('testC.npy',track_C)
     
-    fig,ax = plt.subplots()
-    ax.plot(track_A[:,1],alpha=0.5,color='green')
-    ax.plot(track_B[:,1],alpha=0.5,color='blue')
-    ax.plot(consensus_path[:,1],alpha=1,color='black',linestyle=':')
+    if False:
+        fig,ax = plt.subplots()
+        ax.plot(track_A[:,1],alpha=0.5,color='green',label='BR-detection')
+        ax.plot(track_B[:,1],alpha=0.5,color='blue',label='sleap')
+        #ax.plot(cost_diff,color='gray',label='cost')
+        ax.plot(consensus_path[:,1],alpha=1,color='black',linestyle=':',label='consensus')
 
-    plt.show()
+        ax.legend()
+        plt.show()
 
