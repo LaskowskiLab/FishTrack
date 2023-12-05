@@ -18,6 +18,7 @@ def build_parse():
     parser.add_argument('--dump','-d',action='store_true',help='Trash output?')
     parser.add_argument('--output','-o',required=False,help='Path to output video')
     parser.add_argument('--other_track','-b',required=False,help='Second array of tracks to plot, very niche')
+    parser.add_argument('--third_track','-c',required=False,help='Third array of tracks to plot, even more niche')
     return parser.parse_args()
 
 ## Take an array and clean out single points, then interpolate
@@ -64,17 +65,33 @@ if '.h5' in args.vid_file:
 elif '.npy' in args.tracks:
     a = np.load(args.tracks)
 
+print(a.shape)
+
 if args.other_track is not None:
     b = np.load(args.other_track)
 else:
     b = None
+
+if args.third_track is not None:
+    c = np.load(args.third_track)
+else:
+    c = None
 ## Clean up and interpolate tracks
 
+## Probably need a c here too
 if b is not None:
     b[np.isnan(b)] = 0
 
-    b = b.reshape([1,len(b),2])
+    if len(b.shape) == 2:
+        b = b.reshape([1,len(b),2])
     b = b.astype(int)
+
+if c is not None:
+    c[np.isnan(c)] = 0
+
+    if len(c.shape) == 2:
+        c = c.reshape([1,len(c),2])
+    c = c.astype(int)
 
 if len(a.shape) == 2:
     n_fish = 1
@@ -85,7 +102,7 @@ else:
 
 if n_fish > 1:
     for f in range(n_fish):
-        a[f] = clean_track(a[f])
+        #a[f] = clean_track(a[f])
         pass
 
 a = a.astype(int)
@@ -107,6 +124,7 @@ tail_length = 10
 t=0
 print('Working on it...')
 
+print(a.shape,b.shape,c.shape)
 while(cap.isOpened()):
     ret, frame = cap.read()
     rad = 5
@@ -125,6 +143,8 @@ while(cap.isOpened()):
             cv2.circle(frame,(a[f,t-l,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1)
         if b is not None:
             cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,255,0],thickness=-1)
+        if c is not None:
+            cv2.circle(frame,(c[f,t,0],c[f,t,1]),radius=rad-1,color=[255,0,0],thickness=-1)
     if args.visualize:
         cv2.imshow('Overlay',frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
