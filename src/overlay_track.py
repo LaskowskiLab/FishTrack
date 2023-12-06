@@ -98,7 +98,8 @@ if len(a.shape) == 2:
     a = a.reshape([1,len(a),2])
 else:
     n_fish = np.shape(a)[0]
-    a = np.nanmean(a,axis=2)
+    if len(a.shape) == 4:
+        a = np.nanmean(a,axis=2)
 
 if n_fish > 1:
     for f in range(n_fish):
