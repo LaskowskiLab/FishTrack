@@ -108,7 +108,7 @@ if __name__ == '__main__':
     #track_A = np.nanmean(track_A,axis=1)
     #track_B = np.nanmean(track_B,1)
     #track_A = track_A[0]
-    track_B = np.nanmean(track_B,axis=2)
+    #track_B = np.nanmean(track_B,axis=2)
 
     print(track_A.shape,track_B.shape)
 
@@ -125,12 +125,12 @@ if __name__ == '__main__':
         track_C[n] = consensus_track
     np.save('testC.npy',track_C)
     
-    if False:
+    if True:
         fig,ax = plt.subplots()
-        ax.plot(track_A[:,1],alpha=0.5,color='green',label='BR-detection')
-        ax.plot(track_B[:,1],alpha=0.5,color='blue',label='sleap')
+        ax.plot(track_A[3,:,1],alpha=0.5,color='green',label='BR-detection')
+        ax.plot(track_B[3,:,1],alpha=0.5,color='blue',label='sleap')
         #ax.plot(cost_diff,color='gray',label='cost')
-        ax.plot(consensus_path[:,1],alpha=1,color='black',linestyle=':',label='consensus')
+        ax.plot(consensus_track[:,1],alpha=1,color='black',linestyle=':',label='consensus')
 
         ax.legend()
         plt.show()
