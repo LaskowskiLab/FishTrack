@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 import argparse
 from matplotlib import pyplot as plt
+import parse_sleap
 
 ## Build argument parser
 def build_parse():
@@ -68,16 +69,16 @@ def read_clean_h5(in_file):
 ## Take a full, raw list of tracks, convert it to cleaned, single track
 ## This assumes a single fish in a large tank
 def clean_track(locations,track_occupancy = None,instance_scores=None,stds=3,min_track=2,max_speed = 200):
-    all_tracks = np.nanmean(locations,1)
-    if track_occupancy is None:
-        track_occupancy = (1- np.isnan(all_tracks[:,0]).T).astype(bool)
-    else:
-        track_occupancy = np.array(track_occupancy)
-
+    all_tracks = np.array(locations)
     if len(np.shape(all_tracks)) == 4:
         all_tracks = np.nanmean(all_tracks,axis=1) ## compress along nodes if needed
     else:
         all_tracks = np.array(all_tracks)
+
+    if track_occupancy is None:
+        track_occupancy = (1- np.isnan(all_tracks[:,0]).T).astype(bool)
+    else:
+        track_occupancy = np.array(track_occupancy)
 
     trimmed_tracks,track_occupancy_trim = clear_peaks_all(all_tracks,track_occupancy,plot_me=False,stds=3)
 
@@ -92,6 +93,24 @@ def clean_track(locations,track_occupancy = None,instance_scores=None,stds=3,min
     full_track[:,1] = interp_track(clean_track[:,1])
     return full_track,clean_occupancy
 
+def simply_flatten(locations,track_occupancy = None,instance_scores=None,stds=3,min_track=2):
+    all_tracks = np.array(locations)
+    track_occupancy = np.array(track_occupancy)
+    if len(np.shape(all_tracks)) == 4:
+        all_tracks = np.nanmean(all_tracks,axis=1) ## compress along nodes if needed
+    else:
+        all_tracks = np.array(all_tracks)
+
+    if track_occupancy is None:
+        track_occupancy = (1- np.isnan(all_tracks[:,0]).T).astype(bool)
+    else:
+        track_occupancy = np.array(track_occupancy)
+
+    trimmed_tracks,track_occupancy_trim = clear_peaks_all(all_tracks,track_occupancy,plot_me=False,stds=stds)
+
+    single_track,single_occupancy = overlay_tracks(trimmed_tracks,track_occupancy_trim,instance_scores,min_track=min_track)
+
+    return single_track,single_occupancy 
 
 def clear_lone_points(a):
     a = np.array(a)
