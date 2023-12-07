@@ -1,5 +1,9 @@
 import numpy as np
 import sys
+import argparse
+from datetime import datetime 
+import pandas as pd 
+
 def count_open(track,center_point):
     #import pdb;pdb.set_trace()
     clean_track = track[~np.isnan(track[:,0])]
@@ -23,6 +27,35 @@ def build_parse():
     parser.add_argument('--project_csv','-p',required=False,help='Path to a project csv where all the summary statistics will be written')
     parser.add_argument('--video_key','-k',required=False,help='Path to csv containing the identity of the fish')
     return parser.parse_args()
+
+def build_dict(input_csv):
+    data_dict = {}
+    data_df = pd.read_csv(input_csv)
+    pis = data_df.pi.unique()
+    for p in pis:
+        sub_dict = {}
+        sub_dict['start'] = list(data_df[data_df.pi == p].start)
+        sub_dict['start'] = list(data_df[data_df.pi == p].start)
+        sub_dict['end'] = list(data_df[data_df.pi == p].end)
+
+        raw_cells = list(data_df[data_df.pi == p].occupiedCells)
+        raw_IDs = list(data_df[data_df.pi == p].IDs)
+
+        cells = []
+        for c in raw_cells:
+            clean_c = c.strip("[]")
+            cells.append(clean_c.split(','))
+        IDs = []
+        for i in raw_IDs: ## sort of clunky way to deal with where strings start
+            clean_i = i.strip("[]")
+            IDs.append(clean_i.split(','))
+
+        sub_dict['OccupiedCells'] = cells 
+        sub_dict['IDs'] = IDs
+        sub_dict['start']
+        data_dict[p] = sub_dict
+    return data_dict
+
 
 if __name__ == "__main__":
     args = build_parse()
@@ -82,26 +115,32 @@ if __name__ == "__main__":
 
     fish_ids = [None for f in range(4)]
     delta = np.inf
-    if args.info_key is not None:
-        basename = args.infile.split('/')[-1]
+    delta_days = np.nan
+    date_str = np.nan
+    year_day = np.nan
+    if args.video_key is not None:
+        data_dict = build_dict(args.video_key)
+
+        basename = args.in_file.split('/')[-1]
         piID = basename.split('.')[0]
         date = basename.split('.')[1:4]
         YYYY,MM,DD = date
         date_str = '/'.join([YYYY,MM,DD])
         file_date = datetime.strptime(date_str, '%Y/%m/%d')
-        for m in date_dict[piID]:
-            start_date = datetime.strptime(m['start'], '%m/%d/%y')
-            end_date = datetime.strptime(m['end'], '%m/%d/%y')
+        pi_dict = data_dict[piID]
+        n_possible_vids = len(pi_dict['start'])
+        for m in range(n_possible_vids):
+            start_date = datetime.strptime(pi_dict['start'][m], '%m/%d/%y')
+            end_date = datetime.strptime(pi_dict['end'][m], '%m/%d/%y')
             
-            if file_date > start_date and file_date < end_date:
+            if file_date >= start_date and file_date <= end_date:
                 delta_m = file_date - start_date
-                if delta_m < delta: ## this allows us to deal with multiple possible start times and pick the right one
-                    delta = delta_m
-                    delta_days = delta.days
+                if delta_m.days < delta: ## this allows us to deal with multiple possible start times and pick the right one
+                    delta_days = delta_m.days
+                    delta = delta_days
                     year_day = file_date.timetuple().tm_yday
-                    fish_ids = m['IDs']
-                    occupied_cells = m['occupiedCells']
-                    fisherator = occupied_cells
+                    fish_ids = pi_dict['IDs'][m]
+                    occupied_cells = pi_dict['OccupiedCells'][m]
     if args.out_file is None:
         outfile = args.in_file.replace('.npy','.csv')
     else:
@@ -136,7 +175,7 @@ if __name__ == "__main__":
             corner_array[f,i] = courage_ratio
             activity_array[f,i] = sub_active
 
-    if project_csv is not None:
+    if args.project_csv is not None:
         project_f = open(args.project_csv,'a')
 
     with open(outfile,'w') as out_f:
@@ -164,7 +203,7 @@ if __name__ == "__main__":
                 meanAct_ = str(np.round(activity_array[f,i],3))
                 meanBold_ = str(np.round(corner_array[f,i],3))
 
-                f_line = delim.join([track_file.replace('.npy',''),str(fish_id),str(f),str(i),date_str,str(delta_days),str(yearDay),
+                f_line = delim.join([track_file.replace('.npy',''),str(fish_id),str(f),str(i),str(date_str),str(delta_days),str(year_day),
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
                 out_f.write(f_line + '\n')
