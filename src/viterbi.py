@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import argparse
 
 ## This code will integrate two (possibly) conflicting tracks from a single individual. 
 
@@ -121,19 +122,21 @@ if __name__ == '__main__':
     #track_B = np.load('testB.npy')
     #track_A = np.load('../src/flat_detections_baby.npy')
     #track_B = np.load('../working_dir/pi13.2023.10.11.06.00.squished.npy')
-    track_A = args.sleap_track
-    track_B = args.br_track
+    track_A = np.load(args.sleap_track)
+    track_B = np.load(args.br_track)
 
     if np.shape(track_A) != np.shape(track_B):
         print('tracks do not match, this will likely cause problems')
 
     track_C = np.empty_like(track_A)
+    print('Building conensus tracks')
     for n in range(4):
         consensus_track,best_path,cost_diff = viterbi(track_A[n],track_B[n])
         track_C[n] = consensus_track
 
     if not args.dump:
-        np.save(out_file,track_C)
+        print('Saving conensus at:',outfile)
+        np.save(outfile,track_C)
     
     if args.visualize:
         fig,ax = plt.subplots()
