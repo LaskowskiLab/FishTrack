@@ -145,8 +145,12 @@ def clean_detections(detections):
 
 if __name__ == "__main__":
     input_video_path = sys.argv[1]
-    output_npy = input_video_path.replace('.mp4','CleanBrQuad.npy')
-    detections = make_spots(input_video_path,output_video_path,write_video=False)
+    if len(sys.argv) == 3:
+        output_npy = sys.argv[2]
+    else:
+        output_npy = input_video_path.replace('.mp4','CleanBrQuad.npy')
+
+    detections = make_spots(input_video_path,write_video=False)
     #detections = np.load('./example_detections_baby.npy')
     flat_detections = clean_detections(detections)
     np.save(output_npy,flat_detections)
