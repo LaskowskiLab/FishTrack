@@ -5,6 +5,20 @@ from matplotlib import pyplot as plt
 
 ## This assumes they're already merged to a single 1 X T track, with np.nan gaps
 
+def build_parse():
+    parser = argparse.ArgumentParser(description='Required and additional inputs')
+    parser.add_argument('--sleap_track','-a',required=True,help='Path to .npy, generated from output from SLEAP')
+    parser.add_argument('--br_track','-b',required=True,help='Path to second .npy file, output from br-detection')
+    parser.add_argument('--out_file','-o',required=False,help='Path to .npy output, if not specified, just uses existing filename')
+    parser.add_argument('--center_list','-x',required=False,help='Optional center_dict to define central point')
+    parser.add_argument('--id','-c',required=False,help='Camera id, required if using the defined center points')
+    parser.add_argument('--n_fish','-n',required=False,help='Number of fish, defaults to 4')
+    parser.add_argument('--quadrants','-q',required=False,help='List of quadrants (left to right, top down) where fish are, i.e. [0,1,3]')
+    parser.add_argument('--visualize','-v',action='store_true',help='Visualize plot, defaults to False')
+    parser.add_argument('--dump','-d',action='store_true',help='Debug option to prevent saving output')
+    return parser.parse_args()
+
+
 
 def distance_cost(X,Y,axis=None):
     return np.linalg.norm(X-Y,axis=axis)**2 / 1000
@@ -97,35 +111,31 @@ def viterbi(track_A,track_B,distance_cost=distance_cost):
     return consensus_track,best_state,cost_diff
 
 if __name__ == '__main__':
+    args = build_parse()
 
+    if args.out_file is None:
+        outfile = args.sleap_track.replace('.npy','.combined.npy')
+    else:
+        outfile = args.out_file
     #track_A = np.load('testA.npy')
     #track_B = np.load('testB.npy')
-    track_A = np.load('../src/flat_detections_baby.npy')
-    track_B = np.load('../working_dir/pi13.2023.10.11.06.00.squished.npy')
+    #track_A = np.load('../src/flat_detections_baby.npy')
+    #track_B = np.load('../working_dir/pi13.2023.10.11.06.00.squished.npy')
+    track_A = args.sleap_track
+    track_B = args.br_track
 
-    print(track_A.shape,track_B.shape)
-
-    #track_A = np.nanmean(track_A,axis=1)
-    #track_B = np.nanmean(track_B,1)
-    #track_A = track_A[0]
-    #track_B = np.nanmean(track_B,axis=2)
-
-    print(track_A.shape,track_B.shape)
-
-    if False:
-        if len(track_B) != len(track_A):
-            if len(track_A) > len(track_B):
-                track_A = track_A[:len(track_B)]
-            else:
-                track_B = track_B[:len(track_A)]
+    if np.shape(track_A) != np.shape(track_B):
+        print('tracks do not match, this will likely cause problems')
 
     track_C = np.empty_like(track_A)
     for n in range(4):
         consensus_track,best_path,cost_diff = viterbi(track_A[n],track_B[n])
         track_C[n] = consensus_track
-    np.save('testC.npy',track_C)
+
+    if not args.dump:
+        np.save(out_file,track_C)
     
-    if True:
+    if args.visualize:
         fig,ax = plt.subplots()
         ax.plot(track_A[3,:,1],alpha=0.5,color='green',label='BR-detection')
         ax.plot(track_B[3,:,1],alpha=0.5,color='blue',label='sleap')
