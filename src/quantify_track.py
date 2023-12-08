@@ -130,21 +130,20 @@ if __name__ == "__main__":
         file_date = datetime.strptime(date_str, '%Y/%m/%d')
         pi_dict = data_dict[piID]
         n_possible_vids = len(pi_dict['start'])
+        year_day = file_date.timetuple().tm_yday
         for m in range(n_possible_vids):
             start_date = datetime.strptime(pi_dict['start'][m], '%m/%d/%y')
             end_date = datetime.strptime(pi_dict['end'][m], '%m/%d/%y')
             
-            if file_date >= start_date and file_date <= end_date:
-                delta_m = file_date - start_date
-                if delta_m.days < delta: ## this allows us to deal with multiple possible start times and pick the right one
-                    delta_days = delta_m.days
-                    delta = delta_days
-                    year_day = file_date.timetuple().tm_yday
-                    #fish_ids = pi_dict['IDs'][m]
-                    occupied_cells = pi_dict['OccupiedCells'][m]
-                    for o in occupied_cells:
-                        fish_deltas[o] = delta_days
-                        fish_ids[o] = pi_dict['IDs'][m]
+            delta_m = file_date - start_date
+            delta_days = delta_m.days
+            delta = delta_days
+            #fish_ids = pi_dict['IDs'][m]
+            occupied_cells = pi_dict['OccupiedCells'][m]
+## There are some cases where the video has different aged fish in different cells
+            for o in occupied_cells:
+                fish_deltas[o] = delta_days
+                fish_ids[o] = pi_dict['IDs'][m]
     if args.out_file is None:
         outfile = args.in_file.replace('.npy','.csv')
     else:
