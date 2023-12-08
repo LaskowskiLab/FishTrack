@@ -119,6 +119,7 @@ if __name__ == "__main__":
     date_str = np.nan
     year_day = np.nan
     if args.video_key is not None:
+        fish_deltas = [-1 for n in range(4)]
         data_dict = build_dict(args.video_key)
 
         basename = args.in_file.split('/')[-1]
@@ -139,8 +140,11 @@ if __name__ == "__main__":
                     delta_days = delta_m.days
                     delta = delta_days
                     year_day = file_date.timetuple().tm_yday
-                    fish_ids = pi_dict['IDs'][m]
+                    #fish_ids = pi_dict['IDs'][m]
                     occupied_cells = pi_dict['OccupiedCells'][m]
+                    for o in occupied_cells:
+                        fish_deltas[o] = delta_days
+                        fish_ids[o] = pi_dict['IDs'][m]
     if args.out_file is None:
         outfile = args.in_file.replace('.npy','.csv')
     else:
@@ -203,7 +207,7 @@ if __name__ == "__main__":
                 meanAct_ = str(np.round(activity_array[f,i],3))
                 meanBold_ = str(np.round(corner_array[f,i],3))
 
-                f_line = delim.join([track_file.replace('.npy',''),str(fish_id),str(f),str(i),str(date_str),str(delta_days),str(year_day),
+                f_line = delim.join([track_file.replace('.npy',''),str(fish_id),str(f),str(i),str(date_str),str(fish_deltas[f]),str(year_day),
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
                 out_f.write(f_line + '\n')
