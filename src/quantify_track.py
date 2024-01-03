@@ -5,7 +5,6 @@ from datetime import datetime
 import pandas as pd 
 
 def count_open(track,center_point):
-    #import pdb;pdb.set_trace()
     clean_track = track[~np.isnan(track[:,0])]
     xs = np.abs(clean_track[:,0] - center_point[0]) > 100
     ys = np.abs(clean_track[:,1] - center_point[1]) > 200
@@ -21,24 +20,22 @@ def build_parse():
     parser.add_argument('--id','-c',required=False,help='Camera id, required if using the defined center points')
     parser.add_argument('--n_fish','-n',required=False,help='Number of fish, defaults to 4')
     parser.add_argument('--quadrants','-q',required=False,help='List of quadrants (left to right, top down) where fish are, i.e. [0,1,3]')
-    parser.add_argument('--visualize','-v',action='store_true',help='Visualize plot, defaults to False')
+    parser.add_argument('--png','-s',action='store_true',help='If included, saves a png scatter plot')
     parser.add_argument('--dump','-d',action='store_true',help='Debug option to prevent saving output')
-    parser.add_argument('--spots','-f',required=False,help='Path to mp4 of spotlighted video from spotlight.py')
     parser.add_argument('--project_csv','-p',required=False,help='Path to a project csv where all the summary statistics will be written')
-    parser.add_argument('--video_key','-k',required=False,help='Path to csv containing the identity of the fish')
+    parser.add_argument('--video_key','-k',required=False,help='Path to tsv containing the identity of the fish')
     return parser.parse_args()
 
-def build_dict(input_csv):
+def build_dict(input_tsv):
     data_dict = {}
-    data_df = pd.read_csv(input_csv)
+    data_df = pd.read_table(input_tsv)
     pis = data_df.pi.unique()
     for p in pis:
         sub_dict = {}
         sub_dict['start'] = list(data_df[data_df.pi == p].start)
-        sub_dict['start'] = list(data_df[data_df.pi == p].start)
         sub_dict['end'] = list(data_df[data_df.pi == p].end)
 
-        raw_cells = list(data_df[data_df.pi == p].occupiedCells)
+        raw_cells = list(data_df[data_df.pi == p].OccupiedCells)
         raw_IDs = list(data_df[data_df.pi == p].IDs)
 
         cells = []
@@ -52,7 +49,6 @@ def build_dict(input_csv):
 
         sub_dict['OccupiedCells'] = cells 
         sub_dict['IDs'] = IDs
-        sub_dict['start']
         data_dict[p] = sub_dict
     return data_dict
 
@@ -93,7 +89,6 @@ if __name__ == "__main__":
 
     else:
         print('Something went terribly wrong')
-
     bin_size = 3600 ## this means 1 hour
     n_bins = n_frames // bin_size
 
@@ -115,39 +110,56 @@ if __name__ == "__main__":
 
     fish_ids = [None for f in range(4)]
     delta = np.inf
-    delta_days = np.nan
+    fish_deltas = [np.nan for f in range(4)]
     date_str = np.nan
     year_day = np.nan
-    if args.video_key is not None:
-        fish_deltas = [-1 for n in range(4)]
-        data_dict = build_dict(args.video_key)
+    vid_name = args.in_file
 
-        basename = args.in_file.split('/')[-1]
-        piID = basename.split('.')[0]
-        date = basename.split('.')[1:4]
-        YYYY,MM,DD = date
-        date_str = '/'.join([YYYY,MM,DD])
-        file_date = datetime.strptime(date_str, '%Y/%m/%d')
-        pi_dict = data_dict[piID]
-        n_possible_vids = len(pi_dict['start'])
-        year_day = file_date.timetuple().tm_yday
-        for m in range(n_possible_vids):
-            start_date = datetime.strptime(pi_dict['start'][m], '%m/%d/%y')
-            end_date = datetime.strptime(pi_dict['end'][m], '%m/%d/%y')
-            
-            delta_m = file_date - start_date
-            delta_days = delta_m.days
-            delta = delta_days
-            #fish_ids = pi_dict['IDs'][m]
-            occupied_cells = pi_dict['OccupiedCells'][m]
+    basename = args.in_file.split('/')[-1]
+    piID = basename.split('.')[0]
+    date = basename.split('.')[1:4]
+    vid_name = '.'.join([piID] + date)
+    if args.video_key is not None:
+        data_dict = build_dict(args.video_key)
+        if piID in data_dict.keys():
+            fish_deltas = [np.nan for n in range(4)]
+
+
+            YYYY,MM,DD = date
+            date_str = '/'.join([YYYY,MM,DD])
+            file_date = datetime.strptime(date_str, '%Y/%m/%d')
+            pi_dict = data_dict[piID]
+            n_possible_vids = len(pi_dict['start'])
+            year_day = file_date.timetuple().tm_yday
+            delta_days = 500 
+            for m in range(n_possible_vids):
+                start_date = datetime.strptime(pi_dict['start'][m], '%m/%d/%y')
+                end_date = datetime.strptime(pi_dict['end'][m], '%m/%d/%y')
+                
+                if file_date < start_date:
+                    continue
+                delta_m = file_date - start_date
+                if delta_m.days < delta_days:
+                    delta_days = delta_m.days
+                delta = delta_days
+                #fish_ids = pi_dict['IDs'][m]
+                occupied_cells = pi_dict['OccupiedCells'][m]
+                occupied_cells = [int(o) for o in occupied_cells]
 ## There are some cases where the video has different aged fish in different cells
-            for o in occupied_cells:
-                fish_deltas[o] = delta_days
-                fish_ids[o] = pi_dict['IDs'][m]
+                for o in occupied_cells:
+                    fish_deltas[o] = delta_days
+                    fish_ids[o] = pi_dict['IDs'][m][o]
     if args.out_file is None:
         outfile = args.in_file.replace('.npy','.csv')
     else:
         outfile = args.out_file
+
+    if args.png:
+        fig,ax = plt.subplots()
+        for f in n_fish:
+            ax.scatter(track[f])
+        fig.save_fig(outfile.replace('.csv','.png'),dpi=300)
+
 
     for f in range(4): ## defined above
         sub_track = track[f]
@@ -180,6 +192,10 @@ if __name__ == "__main__":
 
     if args.project_csv is not None:
         project_f = open(args.project_csv,'a')
+        if np.sum(~np.isnan(fish_deltas)) == 0:
+            orphan_path = args.project_csv.replace('.csv','.orphaned.csv')
+            with open(orphan_path,'a') as orphan_f:
+                orphan_f.write(args.in_file + '\n')
 
     with open(outfile,'w') as out_f:
         delim = ','
@@ -206,7 +222,7 @@ if __name__ == "__main__":
                 meanAct_ = str(np.round(activity_array[f,i],3))
                 meanBold_ = str(np.round(corner_array[f,i],3))
 
-                f_line = delim.join([track_file.replace('.npy',''),str(fish_id),str(f),str(i),str(date_str),str(fish_deltas[f]),str(year_day),
+                f_line = delim.join([vid_name,str(fish_id),str(f),str(i),str(date_str),str(fish_deltas[f]),str(year_day),
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
                 out_f.write(f_line + '\n')
