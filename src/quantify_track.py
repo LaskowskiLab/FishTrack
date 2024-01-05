@@ -139,16 +139,20 @@ if __name__ == "__main__":
                 if file_date < start_date:
                     continue
                 delta_m = file_date - start_date
-                if delta_m.days < delta_days:
-                    delta_days = delta_m.days
                 delta = delta_days
                 #fish_ids = pi_dict['IDs'][m]
                 occupied_cells = pi_dict['OccupiedCells'][m]
                 occupied_cells = [int(o) for o in occupied_cells]
 ## There are some cases where the video has different aged fish in different cells
-                for o in occupied_cells:
-                    fish_deltas[o] = delta_days
-                    fish_ids[o] = pi_dict['IDs'][m][o]
+                for o in range(4):
+## need to get this right for every fish...
+                    if np.isnan(fish_deltas[o]) or delta_m.days < fish_deltas[o]:
+                        fish_deltas[o] = delta_m.days
+                        fish_ids[o] = pi_dict['IDs'][m][o]
+                        if fish_ids[0] == 'n/a':
+                            fish_ids[0] = None 
+                    else:
+                        continue
     if args.out_file is None:
         outfile = args.in_file.replace('.npy','.csv')
     else:
