@@ -3,8 +3,11 @@ import sys
 #VIDEO_LIST = "path_lists/jay.adults.videos.txt"
 #PATH_LIST = 'path_lists/jay.adults.paths.txt'
 
-VIDEO_LIST = "path_lists/jay.adults.videos.txt"
-PATH_LIST = 'path_lists/jay.adults.paths.txt'
+VIDEO_LIST = "path_lists/jay.babies.videos.fours.csv"
+PATH_LIST = 'path_lists/jay.babies.paths.fours.csv'
+
+#VIDEO_LIST = "path_lists/jay.babies.videos.first.csv"
+#PATH_LIST = 'path_lists/jay.babies.paths.first.csv'
 
 with open(VIDEO_LIST) as f:
     VIDEOS = f.read().splitlines()
@@ -12,10 +15,11 @@ with open(VIDEO_LIST) as f:
 with open(PATH_LIST) as f:
     BOX_PATHS = f.read().splitlines()
 
-M_CENTERED = "/data/sleapModels/efficientb3.b0.centered_instance.400"
-M_CENTROID = "/data/sleapModels/efficientb3.b0.centroid.400"
-CENTER_DICT = "/home/ammon/Documents/Scripts/FishTrack/src/center_dict.23.08.01.tsv" 
-PROJECT_CSV = "/home/ammon/Documents/Scripts/FishTrack/snake/results/jay.adults.csv"
+M_CENTERED = "/data/sleapModels/leap.take2.centered_instance.403"
+M_CENTROID = "/data/sleapModels/leap.take2.centroid.403"
+CENTER_DICT = "/home/ammon/Documents/Scripts/FishTrack/src/center_dict.23.09.01.tsv" 
+KEY_TSV = "/data/tracking/jay.babies/pi.babies.key.tsv"
+PROJECT_CSV = "/home/ammon/Documents/Scripts/FishTrack/snake/results/jay.babies.csv"
 
 vid_to_path = dict(zip(VIDEOS,BOX_PATHS))
 
@@ -28,26 +32,41 @@ rule all:
     input:
         #expand("snake/videos/{video}.mp4",video=VIDEOS),
         #expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
-        #expand("snake/spots/{video}.spot.mp4",video=VIDEOS),
+        #expand("snake/exerpts/{video}.5s.mp4",video=VIDEOS),
         #expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
         #expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
         #expand("snake/h5/{video}.h5",video=VIDEOS),
+        #expand("snake/results/tracks/{video}.br_detection.npy",video=VIDEOS),
+        #expand("snake/results/tracks/{video}.sleap.npy",video=VIDEOS),
+        #expand("snake/results/tracks/{video}.combined.npy",video=VIDEOS),
+        #expand("snake/results/overlays/{video}.overlay.mp4",video=VIDEOS),
         expand("snake/results/csv/{video}.csv",video=VIDEOS),
-        expand("snake/results/txt/{video}.txt",video=VIDEOS),
-        #expand("snake/results/logs/{video}.log",video=VIDEOS)
+        ## Expand these two to have uploading work
+        #expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
+        #expand("snake/results/logs/{video}.sleap.log",video=VIDEOS)
 
 rule copy_video:
     output: temporary("snake/videos/{video}.mp4")
+    #output: "snake/videos/{video}.mp4" # good for debug
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
     resources: bandwidth=1 
     priority: 0
     run:
-        shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/ 2> {params.log}")
+## Having this as two steps helps deal with some weirdness in downloading
+        shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/tmp/ 2> {params.log}")
+        shell("mv snake/tmp/{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4")
         #shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4 -P")
         #shell("echo rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4")
         #shell("touch snake/videos/{wildcards.video}.mp4")
+
+## Grab 5s exerpt for Jay
+rule get_exerpt:
+    input:  "snake/videos/{video}.mp4" 
+    output: "snake/exerpts/{video}.5s.mp4"
+    run:
+        shell("ffmpeg -ss 60 -t 5 -i {input} snake/exerpts/{wildcards.video}.5s.mp4 -y")
 
 rule crop_video:
     output: temporary("snake/crops/{video}.crop.mp4")
@@ -58,9 +77,10 @@ rule crop_video:
     params:
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log}"
-        #shell("echo python crop_by_tags.py -i {input} -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log}")
-        #shell("touch snake/crops/{wildcards.video}.crop.mp4")
+        "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -x /home/ammon/Documents/Scripts/FishTrack/src/crop_dicts/crop_dict.23.10.01.tsv -m -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log};"
+## Use these lines to get shorter crops for quicker processing
+        "ffmpeg -ss 60 -i snake/crops/{wildcards.video}.crop.mp4 snake/crops/{wildcards.video}.tmp.mp4 -y;"
+        "mv snake/crops/{wildcards.video}.tmp.mp4 snake/crops/{wildcards.video}.crop.mp4;"
 
 rule upload_crop:
     output: "snake/results/logs/{video}.crop.log"
@@ -71,41 +91,29 @@ rule upload_crop:
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
     run:
-        shell("rclone copy {input} aperkes:{params.remote}{wildcards.video}.crop.mp4 2> {params.log}")
+        shell("rclone copy {input} aperkes:{params.remote} 2>> {params.log}")
         shell("echo uploaded wildcards.video >> snake/results/logs/{wildcards.video}.crop.log")
 
 rule spot_video:
-    output: temporary("snake/spots/{video}.spot.mp4")
+    output: "snake/results/tracks/{video}.br_detection.npy"
     input:  "snake/crops/{video}.crop.mp4"
-    priority: 2
+    priority: 25 
     threads: 2
-    conda:
-        "tracking"
+    conda: "tracking"
     params:
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/spotlight.py {input} snake/spots/{wildcards.video}.spot.mp4 2> {params.log};"
-        #"echo python spotlight.py {input} snake/spots/{wildcards.video}.spot.mp4;"
-        #"touch snake/spots/{wildcards.video}.spot.mp4"
-
-rule upload_spot:
-    output: "snake/results/logs/{video}.spot.log"
-    input:  "snake/spots/{video}.spot.mp4"
-    resources: bandwidth=1
-    priority: 3
-    params:  
-        remote = lambda wildcards: vid_to_path[wildcards.video],
-        log = "snake/results/logs/{video}.log"
-    run:
-        shell("rclone copy {input} {remote}.spot.mp4 2> {params.log}")        
-        #shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.spot.mp4")        
-        #shell("echo wildcards.video > snake/results/logs/{wildcards.video}.spot.log")
+        #"conda info --env 2>> {params.log};"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/clean_quads_br.py {input} snake/results/tracks/{wildcards.video}.br_detection.npy 2>> {params.log};"
+        #"echo python /home/ammon/Documents/Scripts/FishTrack/src/clean_quads_br.py {input} snake/spots/{wildcards.video}.br_detections.npy 2> {params.log};"
+        #"touch snake/spots/{wildcards.video}.br_detections.npy"
 
 rule inference:
+    #output: temporary("snake/sleap/{video}.predictions.slp")
     output: "snake/sleap/{video}.predictions.slp"
     input:  "snake/crops/{video}.crop.mp4"
     resources: gpu=1
-    threads: 2
+    threads: 4
     priority: 100
     conda:
         "sleap130"
@@ -115,7 +123,8 @@ rule inference:
         log = "snake/results/logs/{video}.log"
     shell:
         #shell("sleap-track -i {input} ....")
-        "sleap-track -m {params.centered} -m {params.centroid} --peak_threshold 0.4 --tracking.tracker simple --tracking.similarity centroid --tracking.track_window 5 {input} -o snake/sleap/{wildcards.video}.predictions.slp 2> {params.log}"
+        "ulimit -v 28000000;"
+        "sleap-track -m {params.centered} -m {params.centroid} {input} --peak_threshold 0.7 --tracking.tracker simple --tracking.target_instance_count 8 --tracking.pre_cull_to_target 1 --tracking.similarity centroid --tracking.track_window 5 -o snake/sleap/{wildcards.video}.predictions.slp 2>> {params.log};"
         #"echo sleap-track -m params.centered -m params.centroid --peak_threshold 0.4 {input} -o snake/sleap/{wildcards.video}.predictions.slp"
         #"touch snake/sleap/{wildcards.video}.predictions.slp"
 
@@ -123,53 +132,94 @@ rule tidy_slp:
     output: temporary("snake/sleap/{video}.predictions.squished.slp")
     input: "snake/sleap/{video}.predictions.slp"
     threads: 2
-    priority: 11
+    priority: 90 
     params:
         log = "snake/results/logs/{video}.log"
     conda: "sleap130"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/squish_sleap.py {input} 2> {params.log}"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/squish_sleap.py {input} 2>> {params.log};"
 
 rule convert_h5:
     output: temporary("snake/h5/{video}.h5")
     input:  "snake/sleap/{video}.predictions.squished.slp"
-    priority: 12
+    priority: 91 
     params:
         log = "snake/results/logs/{video}.log"
     conda:
         "sleap130"
     shell:
-        "sleap-convert {input} --format analysis -o snake/h5/{wildcards.video}.h5 2> {params.log}"
+        "sleap-convert {input} --format analysis -o snake/h5/{wildcards.video}.h5 2>> {params.log};"
         #"echo sleap-convert {input} --format analysis -o snake/h5/{wildcards.video}.h5"
         #"touch snake/h5/{wildcards.video}.h5"
 
-rule upload_h5:
-    output: "snake/results/logs/{video}.h5.log"
-    input:  "snake/h5/{video}.h5"
+rule upload_slp_files:
+    output: "snake/results/logs/{video}.sleap.log"
+    input:  
+        h5 = "snake/h5/{video}.h5",
+        sleap = "snake/sleap/{video}.predictions.slp"
     resources: bandwidth=1
-    priority: 2
+    priority: 3 
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
     run:
-        shell("rclone copy aperkes:{remote}{wildcards.video}.h5 2> {params.log}")
-        #shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.h5")
-        shell("echo uploaded {wildcards.video} > snake/results/logs/{wildcards.video}.h5.log")
+        shell("rclone copy {input.h5} aperkes:{params.remote}{wildcards.video}.h5 2>> {params.log}")
+        shell("rclone copy {input.sleap} aperkes:{params.remote}{wildcards.video}.predictions.slp 2>> {params.log}")
 
-rule process_h5:
+        #shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.h5")
+        shell("echo uploaded {wildcards.video} > snake/results/logs/{wildcards.video}.sleap.log")
+
+rule quad_h5:
     output: 
-        "snake/results/csv/{video}.csv",
-        "snake/results/txt/{video}.txt",
+        "snake/results/tracks/{video}.sleap.npy",
     input:  "snake/h5/{video}.h5"
-    priority: 3
+    priority: 27 
     conda: "tracking"
-    log:
     params:
         center = CENTER_DICT,
-        spots = "snake/spots/{wildcards.video}.spots.mp4",
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/process_h5.py -i {input} -o snake/results/csv/{wildcards.video}.csv -p snake/results/jay.adults.csv -x {params.center} 2> {params.log}"
-        #shell("echo python process_h5.py -i {input} -x params.center;")
-        #shell("touch snake/results/csv/{wildcards.video}.csv")
-        #shell("touch snake/results/txt/{wildcards.video}.txt")
+        "python /home/ammon/Documents/Scripts/FishTrack/src/clean_quads_h5.py -i {input} -o snake/results/tracks/{wildcards.video}.sleap.npy -x {params.center} 2>> {params.log};"
+
+rule viterbi:
+    output:
+        "snake/results/tracks/{video}.combined.npy"
+    input:  
+        sleap_track = "snake/results/tracks/{video}.sleap.npy",
+        br_track = "snake/results/tracks/{video}.br_detection.npy"
+    priority: 28 
+    conda: "tracking"
+    params:
+        center = CENTER_DICT,
+        log = "snake/results/logs/{video}.log"
+    shell:
+        "python /home/ammon/Documents/Scripts/FishTrack/src/viterbi.py -a {input.sleap_track} -b {input.br_track} -o snake/results/tracks/{wildcards.video}.combined.npy -x {params.center} 2>> {params.log};"
+
+rule quantify_track:
+    output:
+        "snake/results/csv/{video}.csv"
+    input: "snake/results/tracks/{video}.combined.npy"
+    priority: 29
+    conda: "tracking"
+    params:
+        center = CENTER_DICT,
+        key = KEY_TSV,
+        log = "snake/results/logs/{video}.log"
+    shell:
+        "python /home/ammon/Documents/Scripts/FishTrack/src/quantify_track.py -i {input} -o snake/results/csv/{wildcards.video}.csv -p snake/results/jay.babies.csv -x {params.center} -k {params.key} 2>> {params.log};"
+
+rule overlay_track:
+    output:
+        "snake/results/overlays/{video}.overlay.mp4"
+    threads: 2
+    input:
+        track = "snake/results/tracks/{video}.combined.npy",
+        video = "snake/crops/{video}.crop.mp4"
+    params:
+        log = "snake/results/logs/{video}.log"
+    priority: 30
+    conda: "tracking"
+    shell:
+        "python /home/ammon/Documents/Scripts/FishTrack/src/overlay_track.py -i {input.video} -t {input.track} -o snake/results/overlays/{wildcards.video}.overlay.big.mp4 2>> {params.log};"
+        "ffmpeg -i snake/results/overlays/{wildcards.video}.overlay.big.mp4 -t 120 snake/results/overlays/{wildcards.video}.overlay.mp4 -y 2>> {params.log};"
+        "rm snake/results/overlays/{wildcards.video}.overlay.big.mp4 2>> {params.log};"
