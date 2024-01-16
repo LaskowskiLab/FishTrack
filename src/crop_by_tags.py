@@ -24,7 +24,7 @@ def build_parse():
     parser.add_argument('--out_file','-o',required=False,help='Path to output, if not specified, goes to in_file.crop.mp4')
     parser.add_argument('--crop_list','-x',default=DEFAULT_CROP,help='Optional crop dict to specify locations')
     parser.add_argument('--force_dict','-m',action='store_true',help='If included, it will only use the specified dictionary. Requires id and crop_dict')
-    parser.add_argument('--id','-c',required=False,help='Camera id, required if using the crop dict')
+    parser.add_argument('--id','-c',required=False,help='Camera id, helpful if using the crop dict,otherwise defaults to using filename')
     return parser.parse_args()
 
 
@@ -69,9 +69,10 @@ if ret is True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
 ## Find tags
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
-    parameters =  cv2.aruco.DetectorParameters_create()
-    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    if args.force_dict is False:
+        aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+        parameters =  cv2.aruco.DetectorParameters_create()
+        corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
 else:
     print('First frame failed, going to just default to the dict')
     args.force_dict = True
