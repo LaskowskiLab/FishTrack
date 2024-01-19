@@ -65,7 +65,7 @@ if '.h5' in args.vid_file:
 elif '.npy' in args.tracks:
     a = np.load(args.tracks)
 
-print(a.shape)
+#print(a.shape)
 
 if args.other_track is not None:
     b = np.load(args.other_track)
@@ -125,7 +125,6 @@ tail_length = 10
 t=0
 print('Working on it...')
 
-print(a.shape,b.shape,c.shape)
 while(cap.isOpened()):
     ret, frame = cap.read()
     rad = 5
