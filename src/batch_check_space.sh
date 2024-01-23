@@ -17,7 +17,8 @@ if [ -z "$space" ]; then
     fi
 
 suffix="$(ssh -o "StrictHostKeyChecking=no" $i " cat ~/recording/src/suffix.txt")"
-raspi_id="$(ssh -o "StrictHostKeyChecking=no" $i " pgrep raspivid ")"
+#raspi_id="$(ssh -o "StrictHostKeyChecking=no" $i " pgrep raspivid ")"
+raspi_id="$(ssh -o "StrictHostKeyChecking=no" $i " pgrep rpicam-vid ")"
 
 
 echo $space
