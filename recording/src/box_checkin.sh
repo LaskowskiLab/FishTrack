@@ -23,7 +23,13 @@ grep 'tvservice' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/
 
 ## Grab most recent video clip? 
 #ffmpeg -framerate 1 -sseof -2 -i /home/pi/recording/current.link -update 1 -q:v 1 /home/pi/recording/recent_cap.jpg -y
-ffmpeg -framerate 1 -i /home/pi/recording/current.link -ss $dseconds -vframes 1 -update true recent_cap.jpg -y
+rm /home/pi/recording/recent_cap.jpg
+
+if pgrep rpicam; then
+    ffmpeg -framerate 1 -i /home/pi/recording/current.link -ss $dseconds -vframes 1 -update true /home/pi/recording/recent_cap.jpg -y
+else
+    libcamera-still -q 20 -t 1 -o /home/pi/recording/recent_cap.jpg --nopreview
+fi
 
 rclone copy /home/pi/recording/recent_cap.jpg AmazonBox:/pivideos/$pi_name/_monitoring_
 
