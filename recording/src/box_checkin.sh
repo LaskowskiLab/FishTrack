@@ -23,9 +23,9 @@ grep 'tvservice' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/
 
 ## Grab most recent video clip? 
 #ffmpeg -framerate 1 -sseof -2 -i /home/pi/recording/current.link -update 1 -q:v 1 /home/pi/recording/recent_cap.jpg -y
-ffmpeg -framerate 1 -i ~/recording/current.link -ss $dseconds -vf "scale=iw*sar:ih,setsar=1" -vframes 1 test.png -y
+ffmpeg -framerate 1 -i ~/recording/current.link -ss $dseconds -vf "scale=iw*sar:ih,setsar=1" -vframes 1 recent_cap.png -y
 
-rclone copy /home/pi/recording/recent_cap.jpg AmazonBox:/pivideos/$pi_name/_monitoring_
+rclone copy /home/pi/recording/recent_cap.png AmazonBox:/pivideos/$pi_name/_monitoring_
 
 
 ## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
