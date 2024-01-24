@@ -251,7 +251,7 @@ if __name__ == "__main__":
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
 
-                f_line = f_line + delim + treatment
+                f_line = f_line + delim + str(treatment)
                 if not args.dump:
                     out_f.write(f_line + '\n')
                 if args.project_csv is not None and not args.dump:
