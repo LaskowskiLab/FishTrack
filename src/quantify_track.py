@@ -37,7 +37,10 @@ def build_dict(input_tsv):
 
         raw_cells = list(data_df[data_df.pi == p].OccupiedCells)
         raw_IDs = list(data_df[data_df.pi == p].IDs)
-
+        if "Treatments" in data_df.columns:
+            raw_Treats = list(data_df[data_df.pi == p].Treatments)
+        else:
+            raw_Treats = [str([np.nan for i in range(4)]) for i in raw_IDs]
         cells = []
         for c in raw_cells:
             clean_c = c.strip("[]")
@@ -47,8 +50,15 @@ def build_dict(input_tsv):
             clean_i = i.strip("[]")
             IDs.append(clean_i.split(','))
 
+        Treats = []
+        for i in raw_Treats: ## sort of clunky way to deal with where strings start
+            clean_i = i.strip("[]")
+            Treats.append(clean_i.split(','))
+
+
         sub_dict['OccupiedCells'] = cells 
         sub_dict['IDs'] = IDs
+        sub_dict['Treatments'] = Treatments
         data_dict[p] = sub_dict
     return data_dict
 
@@ -65,8 +75,7 @@ if __name__ == "__main__":
         print('using default:',CENTER)
         center_point = CENTER
     else:
-        print('crop dict found, checking for key')
-        crop_dict = {}
+        print('center dict found, checking for key')
         with open(args.center_list) as f:
             for line in f:
                 k,cs = line.split()
@@ -108,13 +117,14 @@ if __name__ == "__main__":
                 'MeanVisibility_bin','MeanActivity_bin','MeanBoldness_bin',
                                                     'MeanVel_bin','StdVel_Bin','MedianVel_bin']
 
+    columns.append("Treatment")
+
     fish_ids = [None for f in range(4)]
     delta = np.inf
     fish_deltas = [np.nan for f in range(4)]
     date_str = np.nan
     year_day = np.nan
     vid_name = args.in_file
-
     basename = args.in_file.split('/')[-1]
     piID = basename.split('.')[0]
     date = basename.split('.')[1:4]
@@ -123,6 +133,7 @@ if __name__ == "__main__":
         data_dict = build_dict(args.video_key)
         if piID in data_dict.keys():
             fish_deltas = [np.nan for n in range(4)]
+            fish_treatments = [np.nan for n in range(4)]
 
 
             YYYY,MM,DD = date
@@ -147,6 +158,7 @@ if __name__ == "__main__":
                 for o in range(4):
 ## need to get this right for every fish...
                     if np.isnan(fish_deltas[o]) or delta_m.days < fish_deltas[o]:
+                        fish_treatments[o] = pi_dict['Treatments'][m][o]
                         fish_deltas[o] = delta_m.days
                         fish_ids[o] = pi_dict['IDs'][m][o]
                         if fish_ids[0] == 'n/a':
@@ -216,6 +228,7 @@ if __name__ == "__main__":
             meanAct = str(np.round(np.nanmean(activity_array[f]),3))
             meanBold = str(np.round(np.nanmean(corner_array[f]),3))
 
+            treatment = fish_treatments[f] 
             for i in range(n_bins):
                 meanVis_ = str(np.round(visibility_array[f,i],3))
 
@@ -229,6 +242,8 @@ if __name__ == "__main__":
                 f_line = delim.join([vid_name,str(fish_id),str(f),str(i),str(date_str),str(fish_deltas[f]),str(year_day),
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
+
+                out_f.append(treatment)
                 out_f.write(f_line + '\n')
                 if args.project_csv is not None:
                     project_f.write(f_line + '\n')
