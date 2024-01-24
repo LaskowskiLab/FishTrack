@@ -51,6 +51,7 @@ def build_dict(input_tsv):
             IDs.append(clean_i.split(','))
 
         Treats = []
+        #import pdb;pdb.set_trace()
         for i in raw_Treats: ## sort of clunky way to deal with where strings start
             clean_i = i.strip("[]")
             Treats.append(clean_i.split(','))
@@ -58,8 +59,9 @@ def build_dict(input_tsv):
 
         sub_dict['OccupiedCells'] = cells 
         sub_dict['IDs'] = IDs
-        sub_dict['Treatments'] = Treatments
+        sub_dict['Treatments'] = Treats
         data_dict[p] = sub_dict
+
     return data_dict
 
 
@@ -129,6 +131,7 @@ if __name__ == "__main__":
     piID = basename.split('.')[0]
     date = basename.split('.')[1:4]
     vid_name = '.'.join([piID] + date)
+    fish_treatments = [np.nan for n in range(4)]
     if args.video_key is not None:
         data_dict = build_dict(args.video_key)
         if piID in data_dict.keys():
@@ -213,10 +216,15 @@ if __name__ == "__main__":
             with open(orphan_path,'a') as orphan_f:
                 orphan_f.write(args.in_file + '\n')
 
-    with open(outfile,'w') as out_f:
+    if args.dump:
+        f_mode = 'a'
+    else:
+        f_mode = 'w'
+    with open(outfile,f_mode) as out_f:
         delim = ','
         header = delim.join(columns)
-        out_f.write(header + '\n')
+        if not args.dump:
+            out_f.write(header + '\n')
         for f in range(4):
             fish_id = fish_ids[f]
             meanVis = str(np.round(np.nanmean(visibility_array[f]),3))
@@ -243,10 +251,11 @@ if __name__ == "__main__":
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
 
-                out_f.append(treatment)
-                out_f.write(f_line + '\n')
-                if args.project_csv is not None:
+                f_line = f_line + delim + treatment
+                if not args.dump:
+                    out_f.write(f_line + '\n')
+                if args.project_csv is not None and not args.dump:
                     project_f.write(f_line + '\n')
 
-    if args.project_csv is not None:
+    if args.project_csv is not None and not args.dump:
         project_f.close()
