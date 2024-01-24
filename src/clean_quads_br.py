@@ -133,11 +133,11 @@ def flatten_by_quads(quad_detections):
 
     return quad_detections_flat
 
-def clean_detections(detections):
+def clean_detections(detections,center=None):
     print(detections.shape)
     good_detections = strip_peaks(detections)
     print(good_detections.shape)
-    quad_detections = split_by_quads(good_detections)
+    quad_detections = split_by_quads(good_detections,center)
     print(quad_detections.shape)
     flat_detections = flatten_by_quads(quad_detections)
     print(flat_detections.shape)
@@ -150,9 +150,18 @@ if __name__ == "__main__":
     else:
         output_npy = input_video_path.replace('.mp4','CleanBrQuad.npy')
 
+    center = None
+    if len(sys.argv) == 4:
+        with open(sys.argv[3]) as f:
+            for line in f:
+                k,cs = line.split()
+                if k in args.in_file:
+                    center = [int(c) for c in cs.split(',')]
+                    break
+
     detections = make_spots(input_video_path,write_video=False)
     #detections = np.load('./example_detections_baby.npy')
-    flat_detections = clean_detections(detections)
+    flat_detections = clean_detections(detections,center)
     np.save(output_npy,flat_detections)
     #np.save('./example_detections_baby.npy',detections)
     #np.save('./flat_detections_baby.npy',flat_detections)
