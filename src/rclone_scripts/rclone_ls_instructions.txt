@@ -1,0 +1,4 @@
+rclone search: rclone ls aperkes:/pivideos --include "/pi*/2023.06.05*/*2023*0.mp4"
+vim regex to drop the numbers: :%s/^.* //g
+
+alternatively, use lsf and then | grep to get the suffix
