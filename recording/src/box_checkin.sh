@@ -20,6 +20,8 @@ echo "(a number means it's recording, if there's no number it's not)" >> /home/p
 grep 'mmal' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
 grep 'token' /home/pi/recording/cronlog.log | head -1 | grep 'token' | cut -c -52 >> /home/pi/recording/hourly_check.txt
 grep 'tvservice' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
+## Check for zhombie camera process
+pgrep rpicam | xargs ps -f | grep Z >> /home/pi/recording/hourly_check.txt
 
 ## Grab most recent video clip? 
 #ffmpeg -framerate 1 -sseof -2 -i /home/pi/recording/current.link -update 1 -q:v 1 /home/pi/recording/recent_cap.jpg -y
