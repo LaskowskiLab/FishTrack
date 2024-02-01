@@ -3,10 +3,6 @@
 
 # m h  dom mon dow   command
 
-## Take a picture and upload it before video starts
-58 5 * * * raspistill -o /home/pi/recording/morning_check.jpg >> /home/pi/recording/cronlog.log 2>&1
-59 5 * * * bash /home/pi/recording/src/sync_check.sh >> /home/pi/recording/cronlog.log 2>&1
-
 ## Every hour, update hourly check and send it to rclone
 5 6-18 * * * bash /home/pi/recording/src/box_checkin.sh
 
@@ -15,13 +11,14 @@
 0 6 * * * bash /home/pi/recording/src/run_vid.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ## Stop the video
-30 18 * * * pkill raspivid
+#30 18 * * * pkill raspivid
 
 ## Upload video (this also deletes the video from the pi)
 0 20 * * * bash /home/pi/recording/src/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ## Reboot every sunday after recordings are done
-35 18 * * SUN /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
+## you need to make sure the pi is configured to run reboot without passwd
+35 18 * * SUN sudo /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
 
 ## Delete cronlog.log every month
 34 18 1 * * date > cronlog.log
