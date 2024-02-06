@@ -3,6 +3,7 @@ import sys
 import argparse
 from datetime import datetime 
 import pandas as pd 
+from parse_sleap import interp_track
 
 def count_open(track,center_point):
     clean_track = track[~np.isnan(track[:,0])]
@@ -70,7 +71,15 @@ if __name__ == "__main__":
     track_file = args.in_file
 
     track = np.load(track_file)
-
+## We have the option of interpolation, but it's rarely good in tracking tanks.
+    """
+    track_interpolated = np.empty_like(track)
+    for n in range(4):
+        track_interpolated[n,:,0] = interp_track(track[n,:,0])
+        track_interpolated[n,:,1] = interp_track(track[n,:,1])
+    np.save('test_interp.npy',track_interpolated)
+    """
+    
     CENTER = [375,486]
     if args.center_list == None:
         print('no center dict given..')
@@ -105,21 +114,29 @@ if __name__ == "__main__":
 
     n_bins = max(1,n_bins)
 
-    visibility_array = np.zeros([n_fish,n_bins])
-    mean_velocity_array = np.zeros([n_fish,n_bins])
-    median_velocity_array = np.zeros([n_fish,n_bins])
-    std_velocity_array = np.zeros([n_fish,n_bins])
-    activity_array = np.zeros([n_fish,n_bins])
-    corner_array = np.zeros([n_fish,n_bins])
-    medianVels = [0 for f in range(n_fish)]
-    stdVels = [0 for f in range(n_fish)]
+    visibility_array = np.full([n_fish,n_bins],np.nan)
+    mean_velocity_array = np.full([n_fish,n_bins],np.nan)
+    median_velocity_array = np.full([n_fish,n_bins],np.nan)
+    mean_active_velocity_array = np.full([n_fish,n_bins],np.nan)
+    median_active_velocity_array = np.full([n_fish,n_bins],np.nan)
+    std_active_velocity_array = np.full([n_fish,n_bins],np.nan)
+    std_velocity_array = np.full([n_fish,n_bins],np.nan)
+    activity_array = np.full([n_fish,n_bins],np.nan)
+    corner_array = np.full([n_fish,n_bins],np.nan)
+    hiding_array = np.full([n_fish,n_bins],np.nan)
 
+    medianVels = [np.nan for f in range(n_fish)]
+    stdVels = [np.nan for f in range(n_fish)]
+    
+    medianActiveVels = [np.nan for f in range(n_fish)]
+    stdActiveVels = [np.nan for f in range(n_fish)]
+## A smarter person would have made these columns exactly match the variables in the code...
     columns = ['Video','FishID','Quadrant','Bin','Date','ExpDay','YearDay',
                 'MeanVisibility','MeanActivity','MeanBoldness','MeanVel','StdVel','MedianVel',
-                'MeanVisibility_bin','MeanActivity_bin','MeanBoldness_bin',
-                                                    'MeanVel_bin','StdVel_Bin','MedianVel_bin']
-
-    columns.append("Treatment")
+                'MeanVisibility_','MeanActivity_','MeanBoldness_',
+                'MeanVel_','StdVel_','MedianVel_',
+                'Treatments','PropHiding','PropHiding_',
+                'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_']
 
     fish_ids = [None for f in range(4)]
     delta = np.inf
@@ -184,9 +201,15 @@ if __name__ == "__main__":
         sub_track = track[f]
         sub_diff = np.diff(sub_track,axis=0,prepend=0)
         velocity = np.linalg.norm(sub_diff,axis=1)
+        
+        active_velocity = np.array(velocity)
+        active_velocity[active_velocity < 5] = np.nan
 
         medianVels[f] = np.nanmedian(velocity)
         stdVels[f] = np.nanstd(velocity)
+
+        medianActiveVels[f] = np.nanmedian(active_velocity)
+        stdActiveVels[f] = np.nanstd(active_velocity)
 
         visibility = ~np.isnan(sub_track[:,0])
 
@@ -195,10 +218,17 @@ if __name__ == "__main__":
             i1 = (i+1) * bin_size
             track_bin = sub_track[i0:i1]
             sub_velocity = velocity[i0:i1]
-            sub_vel = np.nanmedian(sub_velocity)
+
+            median_velocity_array[f,i] = np.nanmedian(sub_velocity)
+            mean_velocity_array[f,i] = np.nanmean(sub_velocity)
+            std_velocity_array[f,i] = np.nanstd(sub_velocity)
             sub_vis = np.sum(visibility[i0:i1]) / bin_size
+
+            sub_vel = np.nanmedian(sub_velocity)
             clean_velocity = sub_velocity[~np.isnan(sub_velocity)]
             sub_active = np.sum(clean_velocity > 5) / len(clean_velocity)
+
+            sub_velocity_active = active_velocity[i0:i1] ## Active velocity is defined up above, everywhere vel > 5
 
             courage_count,courage_ratio = count_open(track_bin,center_point)
             visibility_array[f,i] = sub_vis
@@ -206,6 +236,11 @@ if __name__ == "__main__":
             mean_velocity_array[f,i] = np.nanmean(sub_velocity)
             std_velocity_array[f,i] = np.nanstd(sub_velocity)
 
+            mean_active_velocity_array[f,i] = np.nanmean(sub_velocity_active)
+            median_active_velocity_array[f,i] = np.nanmedian(sub_velocity_active)
+            std_active_velocity_array[f,i] = np.nanstd(sub_velocity_active)
+
+            hiding_array[f,i] = courage_count / bin_size + sub_vis
             corner_array[f,i] = courage_ratio
             activity_array[f,i] = sub_active
 
@@ -228,15 +263,24 @@ if __name__ == "__main__":
         for f in range(4):
             fish_id = fish_ids[f]
             meanVis = str(np.round(np.nanmean(visibility_array[f]),3))
+            stdVis = str(np.round(np.nanstd(visibility_array[f]),3))
 
             medianVel = str(np.round(medianVels[f],3))
             meanVel = str(np.round(np.nanmean(mean_velocity_array[f]),3))
             stdVel = str(np.round(stdVels[f],3))
 
-            meanAct = str(np.round(np.nanmean(activity_array[f]),3))
-            meanBold = str(np.round(np.nanmean(corner_array[f]),3))
+            medianActiveVel = str(np.round(medianActiveVels[f],3))
+            stdActiveVel = str(np.round(stdActiveVels[f],3))
+            meanActiveVel = str(np.round(np.nanmean(mean_active_velocity_array[f]),3))
 
-            treatment = fish_treatments[f] 
+            meanAct = str(np.round(np.nanmean(activity_array[f]),3))
+            stdAct = str(np.round(np.nanstd(activity_array[f]),3))
+
+            meanBold = str(np.round(np.nanmean(corner_array[f]),3))
+            stdBold = str(np.round(np.nanstd(corner_array[f]),3))
+
+            treatment = str(fish_treatments[f])
+            propHiding = str(np.round(np.nanmean(hiding_array[f]),3))
             for i in range(n_bins):
                 meanVis_ = str(np.round(visibility_array[f,i],3))
 
@@ -244,16 +288,33 @@ if __name__ == "__main__":
                 stdVel_ = str(np.round(std_velocity_array[f,i],3))
                 medianVel_ = str(np.round(median_velocity_array[f,i],3))
 
+                meanActiveVel_ = str(np.round(mean_active_velocity_array[f,i],3))
+                stdActiveVel_ = str(np.round(std_active_velocity_array[f,i],3))
+                medianActiveVel_ = str(np.round(median_active_velocity_array[f,i],3))
+
                 meanAct_ = str(np.round(activity_array[f,i],3))
                 meanBold_ = str(np.round(corner_array[f,i],3))
 
+                propHiding_ = str(np.round(hiding_array[f,i],3))
+
                 f_line = delim.join([vid_name,str(fish_id),str(f),str(i),str(date_str),str(fish_deltas[f]),str(year_day),
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
-                            meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_])
+                            meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_,
+                            treatment,propHiding,propHiding_,
+                            meanActiveVel,stdActiveVel,medianActiveVel,meanActiveVel_,stdActiveVel_,medianActiveVel_])
+                """ # Reminder:
+                columns = ['Video','FishID','Quadrant','Bin','Date','ExpDay','YearDay',
+                            'MeanVisibility','MeanActivity','MeanBoldness','MeanVel','StdVel','MedianVel',
+                            'MeanVisibility_','MeanActivity_','MeanBoldness_',
+                            'MeanVel_','StdVel_','MedianVel_',
+                            'Treatments','PropHiding','PropHiding_',
+                            'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_']
+                """
 
-                f_line = f_line + delim + str(treatment)
                 if not args.dump:
                     out_f.write(f_line + '\n')
+                else:
+                    print(list(zip(columns,f_line.split(','))))
                 if args.project_csv is not None and not args.dump:
                     project_f.write(f_line + '\n')
 
