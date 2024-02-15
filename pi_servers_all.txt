@@ -1,4 +1,4 @@
-pi@raspberrypi.local
+pi@raspberrypi01.local
 pi@raspberrypi02.local
 pi@raspberrypi03.local
 pi@raspberrypi04.local
@@ -22,3 +22,4 @@ pi@raspberrypi21.local
 pi@raspberrypi22.local
 pi@raspberrypi23.local
 pi@raspberrypi24.local
+pi@raspberrypi09OLD.local
