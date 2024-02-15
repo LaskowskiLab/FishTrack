@@ -3,8 +3,8 @@ import sys
 #VIDEO_LIST = "path_lists/jay.adults.videos.txt"
 #PATH_LIST = 'path_lists/jay.adults.paths.txt'
 
-VIDEO_LIST = "path_lists/jay.babies.videos.fours.csv"
-PATH_LIST = 'path_lists/jay.babies.paths.fours.csv'
+VIDEO_LIST = "path_lists/jay.babies.videos.fours2.csv"
+PATH_LIST = 'path_lists/jay.babies.paths.fours2.csv'
 
 #VIDEO_LIST = "path_lists/jay.babies.videos.first.csv"
 #PATH_LIST = 'path_lists/jay.babies.paths.first.csv'
@@ -17,7 +17,7 @@ with open(PATH_LIST) as f:
 
 M_CENTERED = "/data/sleapModels/leap.take2.centered_instance.403"
 M_CENTROID = "/data/sleapModels/leap.take2.centroid.403"
-CENTER_DICT = "/home/ammon/Documents/Scripts/FishTrack/src/center_dict.23.09.01.tsv" 
+CENTER_DICT = "/home/ammon/Documents/Scripts/FishTrack/src/center_dicts/center_dict.23.10.02.tsv" 
 KEY_TSV = "/data/tracking/jay.babies/pi.babies.key.tsv"
 PROJECT_CSV = "/home/ammon/Documents/Scripts/FishTrack/snake/results/jay.babies.csv"
 
@@ -26,24 +26,24 @@ vid_to_path = dict(zip(VIDEOS,BOX_PATHS))
 #print('Videos to process:', VIDEOS, file=sys.stderr)
 
 ## This is an iffy hack
-shell("conda config --add envs_dirs /home/ammon/anaconda3/envs")
+#shell("conda config --add envs_dirs /home/ammon/anaconda3/envs")
 
 rule all:
     input:
         #expand("snake/videos/{video}.mp4",video=VIDEOS),
         #expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
         #expand("snake/exerpts/{video}.5s.mp4",video=VIDEOS),
-        #expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
-        #expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
-        #expand("snake/h5/{video}.h5",video=VIDEOS),
-        #expand("snake/results/tracks/{video}.br_detection.npy",video=VIDEOS),
-        #expand("snake/results/tracks/{video}.sleap.npy",video=VIDEOS),
-        #expand("snake/results/tracks/{video}.combined.npy",video=VIDEOS),
-        #expand("snake/results/overlays/{video}.overlay.mp4",video=VIDEOS),
+        expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
+        expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
+        expand("snake/h5/{video}.h5",video=VIDEOS),
+        expand("snake/results/tracks/{video}.br_detection.npy",video=VIDEOS),
+        expand("snake/results/tracks/{video}.sleap.npy",video=VIDEOS),
+        expand("snake/results/tracks/{video}.combined.npy",video=VIDEOS),
+        expand("snake/results/overlays/{video}.overlay.mp4",video=VIDEOS),
         expand("snake/results/csv/{video}.csv",video=VIDEOS),
         ## Expand these two to have uploading work
-        #expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
-        #expand("snake/results/logs/{video}.sleap.log",video=VIDEOS)
+        expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
+        expand("snake/results/logs/{video}.sleap.log",video=VIDEOS)
 
 rule copy_video:
     output: temporary("snake/videos/{video}.mp4")
@@ -73,11 +73,11 @@ rule crop_video:
     input:  "snake/videos/{video}.mp4" 
     priority: 9
     threads: 2
-    conda: "tracking"
+    conda: "dev"
     params:
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -x /home/ammon/Documents/Scripts/FishTrack/src/crop_dicts/crop_dict.23.10.01.tsv -m -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log};"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -x /home/ammon/Documents/Scripts/FishTrack/src/crop_dicts/crop_dict.23.10.02.tsv -m -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log};"
 ## Use these lines to get shorter crops for quicker processing
         "ffmpeg -ss 60 -i snake/crops/{wildcards.video}.crop.mp4 snake/crops/{wildcards.video}.tmp.mp4 -y;"
         "mv snake/crops/{wildcards.video}.tmp.mp4 snake/crops/{wildcards.video}.crop.mp4;"
@@ -99,7 +99,7 @@ rule spot_video:
     input:  "snake/crops/{video}.crop.mp4"
     priority: 25 
     threads: 2
-    conda: "tracking"
+    conda: "dev"
     params:
         log = "snake/results/logs/{video}.log"
     shell:
@@ -113,10 +113,10 @@ rule inference:
     output: "snake/sleap/{video}.predictions.slp"
     input:  "snake/crops/{video}.crop.mp4"
     resources: gpu=1
-    threads: 4
+    threads: 2
     priority: 100
     conda:
-        "sleap130"
+        "sleap"
     params:
         centered = M_CENTERED,
         centroid = M_CENTROID,
@@ -135,7 +135,7 @@ rule tidy_slp:
     priority: 90 
     params:
         log = "snake/results/logs/{video}.log"
-    conda: "sleap130"
+    conda: "sleap"
     shell:
         "python /home/ammon/Documents/Scripts/FishTrack/src/squish_sleap.py {input} 2>> {params.log};"
 
@@ -146,7 +146,7 @@ rule convert_h5:
     params:
         log = "snake/results/logs/{video}.log"
     conda:
-        "sleap130"
+        "sleap"
     shell:
         "sleap-convert {input} --format analysis -o snake/h5/{wildcards.video}.h5 2>> {params.log};"
         #"echo sleap-convert {input} --format analysis -o snake/h5/{wildcards.video}.h5"
@@ -174,7 +174,7 @@ rule quad_h5:
         "snake/results/tracks/{video}.sleap.npy",
     input:  "snake/h5/{video}.h5"
     priority: 27 
-    conda: "tracking"
+    conda: "dev"
     params:
         center = CENTER_DICT,
         log = "snake/results/logs/{video}.log"
@@ -188,7 +188,7 @@ rule viterbi:
         sleap_track = "snake/results/tracks/{video}.sleap.npy",
         br_track = "snake/results/tracks/{video}.br_detection.npy"
     priority: 28 
-    conda: "tracking"
+    conda: "dev"
     params:
         center = CENTER_DICT,
         log = "snake/results/logs/{video}.log"
@@ -200,7 +200,7 @@ rule quantify_track:
         "snake/results/csv/{video}.csv"
     input: "snake/results/tracks/{video}.combined.npy"
     priority: 29
-    conda: "tracking"
+    conda: "dev"
     params:
         center = CENTER_DICT,
         key = KEY_TSV,
@@ -218,7 +218,7 @@ rule overlay_track:
     params:
         log = "snake/results/logs/{video}.log"
     priority: 30
-    conda: "tracking"
+    conda: "dev"
     shell:
         "python /home/ammon/Documents/Scripts/FishTrack/src/overlay_track.py -i {input.video} -t {input.track} -o snake/results/overlays/{wildcards.video}.overlay.big.mp4 2>> {params.log};"
         "ffmpeg -i snake/results/overlays/{wildcards.video}.overlay.big.mp4 -t 120 snake/results/overlays/{wildcards.video}.overlay.mp4 -y 2>> {params.log};"
