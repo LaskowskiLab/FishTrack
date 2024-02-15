@@ -18,6 +18,7 @@ pgrep rpicam >> /home/pi/recording/hourly_check.txt
 echo "(a number means it's recording, if there's no number it's not)" >> /home/pi/recording/hourly_check.txt
 
 grep 'mmal' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
+grep 'ERROR' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
 grep 'token' /home/pi/recording/cronlog.log | head -1 | grep 'token' | cut -c -52 >> /home/pi/recording/hourly_check.txt
 grep 'tvservice' /home/pi/recording/cronlog.log | head -1 >> /home/pi/recording/hourly_check.txt
 ## Check for zhombie camera process
