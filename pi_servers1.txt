@@ -1,9 +1,10 @@
-pi@raspberrypi.local
+pi@raspberrypi01.local
 pi@raspberrypi02.local
 pi@raspberrypi03.local
 pi@raspberrypi04.local
 pi@raspberrypi05.local
 pi@raspberrypi06.local
+pi@raspberrypi07.local
 pi@raspberrypi08.local
 pi@raspberrypi09.local
 pi@raspberrypi10.local
