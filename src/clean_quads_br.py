@@ -145,17 +145,17 @@ def clean_detections(detections,center=None):
 
 if __name__ == "__main__":
     input_video_path = sys.argv[1]
-    if len(sys.argv) == 3:
+    if len(sys.argv) >= 3:
         output_npy = sys.argv[2]
     else:
         output_npy = input_video_path.replace('.mp4','CleanBrQuad.npy')
 
     center = None
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         with open(sys.argv[3]) as f:
             for line in f:
                 k,cs = line.split()
-                if k in args.in_file:
+                if k in sys.argv[1]:
                     center = [int(c) for c in cs.split(',')]
                     break
 
