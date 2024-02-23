@@ -7,7 +7,7 @@
 0 20 * * * bash /home/pi/recording/src/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ## Perform hourly checks, but only once in the morning at 6:30 so we know it's different
-30 6 * * * bash /home/pi/recording/src/box_checkin.sh
+30 6 * * * bash /home/pi/recording/src/box_checkin.sh 0
 
 ## Reboot every sunday after recordings are done
 35 18 * * SUN sudo /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
