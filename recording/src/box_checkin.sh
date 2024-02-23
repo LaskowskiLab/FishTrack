@@ -9,6 +9,8 @@ if [[ $pi_name == "rypi" ]]; then
     pi_name='pi01'
 fi
 
+scheduled=${1-1}
+
 hour=$(date +"%H")
 dhour="$((hour-6))"
 dseconds="$((dhour*60*60))"
@@ -38,8 +40,11 @@ filename=$(ls -lrt /home/pi/recording/current.link | nawk '{print $11}')
 
 filesize=$(ls -lrt $filename | nawk '{print $5}')
 oldsize=$(cat /home/pi/recording/current_size.txt)
-if [[ "$filesize" == "$oldsize" ]]; then
-    echo "File not growing!" >> /home/pi/recording/hourly_check.txt
+if [[ "$scheduled" == "1" ]]; then
+    echo 'recording!'
+    if [[ "$filesize" == "$oldsize" ]]; then
+        echo "File not growing!" >> /home/pi/recording/hourly_check.txt
+    fi
 fi
 
 echo $filesize > /home/pi/recording/current_size.txt
