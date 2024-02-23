@@ -34,6 +34,16 @@ else
     libcamera-still -q 20 -t 1 -o /home/pi/recording/recent_cap.jpg --nopreview
 fi
 
+filename=$(ls -lrt /home/pi/recording/current.link | nawk '{print $11}')
+
+filesize=$(ls -lrt $filename | nawk '{print $5}')
+oldsize=$(cat /home/pi/recording/current_size.txt)
+if [[ "$filesize" == "$oldsize" ]]; then
+    echo "File not growing!" >> /home/pi/recording/hourly_check.txt
+fi
+
+echo $filesize > /home/pi/recording/current_size.txt
+
 rclone copy /home/pi/recording/recent_cap.jpg AmazonBox:/pivideos/$pi_name/_monitoring_
 
 
