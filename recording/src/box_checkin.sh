@@ -41,7 +41,6 @@ filename=$(ls -lrt /home/pi/recording/current.link | nawk '{print $11}')
 filesize=$(ls -lrt $filename | nawk '{print $5}')
 oldsize=$(cat /home/pi/recording/current_size.txt)
 if [[ "$scheduled" == "1" ]]; then
-    echo 'recording!'
     if [[ "$filesize" == "$oldsize" ]]; then
         echo "File not growing!" >> /home/pi/recording/hourly_check.txt
     fi
