@@ -13,6 +13,14 @@ dest=$2
 
 for i in $(rclone lsf aperkes:/pivideos --max-depth 2 | grep $target_str); do
 
+    if [[ $i == *"SC01"* ]]; then
+        echo Skipping $i
+        continue
+    elif [[ $i == *'VideoDatasets'* ]]; then
+        echo Skipping $i
+        continue
+    fi
+
     echo pivideos/$i to $dest/$i
-    rclone move aperkes:pivideos/$i aperkes:$dest/$i --delete-empty-src-dirs
+    #rclone move aperkes:pivideos/$i aperkes:$dest/$i --delete-empty-src-dirs 
 done
