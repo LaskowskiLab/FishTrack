@@ -4,7 +4,7 @@ bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "Hi there, me agai
 echo ""
 
 snake_dir="/home/ammon/Documents/Scripts/FishTrack/src/snake_pipelines"
-total_files=$(cat $snake_dir/path_lists/jay.babies.paths.fours.csv | wc -l)
+total_files=$(cat $snake_dir/path_lists/jay.babies.paths.fours2.csv | wc -l)
 finished_files=$(ls "$snake_dir"/snake/results/csv | wc -l)
 
 tmp_path="/home/ammon/Documents/Scripts/FishTrack/src/tmp_snake.txt"
