@@ -3,8 +3,8 @@ import sys
 #VIDEO_LIST = "path_lists/jay.adults.videos.txt"
 #PATH_LIST = 'path_lists/jay.adults.paths.txt'
 
-VIDEO_LIST = "path_lists/jay.babies.videos.fours2.csv"
-PATH_LIST = 'path_lists/jay.babies.paths.fours2.csv'
+VIDEO_LIST = "path_lists/jay.babies.unfinished.videos.sorted.txt"
+PATH_LIST = 'path_lists/jay.babies.unfinished.paths.sorted.txt'
 
 #VIDEO_LIST = "path_lists/jay.babies.videos.first.csv"
 #PATH_LIST = 'path_lists/jay.babies.paths.first.csv'
@@ -31,7 +31,7 @@ vid_to_path = dict(zip(VIDEOS,BOX_PATHS))
 rule all:
     input:
         #expand("snake/videos/{video}.mp4",video=VIDEOS),
-        #expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
+        expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
         #expand("snake/exerpts/{video}.5s.mp4",video=VIDEOS),
         expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
         expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
@@ -42,7 +42,7 @@ rule all:
         expand("snake/results/overlays/{video}.overlay.mp4",video=VIDEOS),
         expand("snake/results/csv/{video}.csv",video=VIDEOS),
         ## Expand these two to have uploading work
-        expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
+        #expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
         expand("snake/results/logs/{video}.sleap.log",video=VIDEOS)
 
 rule copy_video:
@@ -123,8 +123,9 @@ rule inference:
         log = "snake/results/logs/{video}.log"
     shell:
         #shell("sleap-track -i {input} ....")
-        "ulimit -v 28000000;"
-        "sleap-track -m {params.centered} -m {params.centroid} {input} --peak_threshold 0.7 --tracking.tracker simple --tracking.target_instance_count 8 --tracking.pre_cull_to_target 1 --tracking.similarity centroid --tracking.track_window 5 -o snake/sleap/{wildcards.video}.predictions.slp 2>> {params.log};"
+        #"ulimit -v 28000000;"
+        #"sleap-track -m {params.centered} -m {params.centroid} {input} --peak_threshold 0.7 --tracking.tracker simple --tracking.target_instance_count 8 --tracking.pre_cull_to_target 1 --tracking.similarity centroid --tracking.track_window 5 -o snake/sleap/{wildcards.video}.predictions.slp 2>> {params.log};"
+        "sleap-track -m {params.centered} -m {params.centroid} {input} --peak_threshold 0.7 --tracking.tracker simplemaxtracks --tracking.max_tracking 1 --tracking.max_tracks 8 --tracking.target_instance_count 8 --tracking.pre_cull_to_target 1 --tracking.similarity centroid --tracking.track_window 5 -o snake/sleap/{wildcards.video}.predictions.slp 2>> {params.log};"
         #"echo sleap-track -m params.centered -m params.centroid --peak_threshold 0.4 {input} -o snake/sleap/{wildcards.video}.predictions.slp"
         #"touch snake/sleap/{wildcards.video}.predictions.slp"
 
