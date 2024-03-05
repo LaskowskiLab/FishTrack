@@ -13,6 +13,7 @@ for d in $dir_list; do
     if [[ "epi" == *"$d"* ]]; then
         continue
     fi
+
     #echo /pivideos/"$d"_monitoring_/hourly_check.txt
     #rclone cat aperkes:/pivideos/"$d"hourly_check.txt
     rclone cat aperkes:/pivideos/"$d"_monitoring_/hourly_check.txt > $tmp_path
