@@ -155,7 +155,7 @@ if __name__ == "__main__":
         with open(sys.argv[3]) as f:
             for line in f:
                 k,cs = line.split()
-                if k in args.in_file:
+                if k in sys.argv[1]:
                     center = [int(c) for c in cs.split(',')]
                     break
 

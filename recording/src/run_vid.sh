@@ -45,6 +45,7 @@ mkdir -p $directory_path
 touch $directory_path$pi_name.$dt_stamp.h264
 ln -fs $directory_path$pi_name.$dt_stamp.h264 /home/pi/recording/current.link
 
+echo 0 > /home/pi/recording/current_size.txt
 ## Add the -n flag or --nopreview to turn off preview, this might help with dropped frames
 #raspistill -t 43200000 -tl 1000 --nopreview -vf -hf -q 20 -h 500 -w 500 -o $directory_path$pi_name.$year_stamp.%01d.jpg -dt
 #raspivid --width 1080 --height 1080 --framerate $f_rate --qp 17 --nopreview --timeout $((($n_hours*60 + $n_minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.h264
