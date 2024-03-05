@@ -11,7 +11,7 @@
 0 6 * * * bash /home/pi/recording/src/run_vid.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ## Stop the video
-#30 18 * * * pkill rpicam
+0 19 * * * pkill rpicam
 
 ## Upload video (this also deletes the video from the pi)
 0 20 * * * bash /home/pi/recording/src/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
@@ -21,7 +21,7 @@
 35 18 * * SUN sudo /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
 
 ## Delete cronlog.log every month
-34 18 1 * * date > cronlog.log
+34 18 1 * * date > /home/pi/recording/cronlog.log
 
 # Deletes any .jpg files older than 5 days (syntax is weird, idk)
 #0 21 * * * find /home/pi/recording -name *.jpg* -mtime +4 -exec rm {} \;
