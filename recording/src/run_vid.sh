@@ -52,5 +52,6 @@ echo 0 > /home/pi/recording/current_size.txt
 # with new pi's this code will work: 
 rpicam-vid --width 1080 --height 1080 --framerate $f_rate --quality 17 --nopreview --timeout $((($n_hours*60 + $n_minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.h264 -v 0
 
+wait
 ## Use this line if the video will be too big:
 #raspivid --width 500 --height 500 --framerate 1 --qp 17 --timeout $((14*60*60*1000)) --segment $((60*60*1000)) --output $directory_path$pi_name.$date_stamp-%02d.h264
