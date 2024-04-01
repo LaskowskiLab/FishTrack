@@ -3,7 +3,8 @@
 
 config=${1-0}
 if [[ "$config" == 0 ]]; then
-    config="/home/pi/recording/mobileSrc/configs/default.config"
+    #config="/home/pi/recording/mobileSrc/configs/default.config"
+    config="/home/pi/recording/current.config"
 fi
 . $config
 

@@ -1,0 +1,29 @@
+# Edit this file to introduce tasks to be run by cron.
+# For more information see the manual pages of crontab(5) and cron(8)
+
+# m h  dom mon dow   command
+
+## VIDEO CRON:
+
+0 5 * * * echo 0 > /home/pi/recording/restart_count.txt
+
+## Do an hourly check in the morning
+30 6 * * * bash /home/pi/recording/src/box_checkin.sh 0
+
+## Upon reboot, check if it should be recording and respond accordingly
+@reboot expr $(cat /home/pi/recording/restart_count.txt) + 1 > /home/pi/recording/restart_count.txt
+@reboot sleep 5 && bash /home/pi/recording/mobileSrc/check_reboot.sh
+@reboot sleep 300 && bash /home/pi/recording/mobileSrc/notify_reboot.sh
+
+## Stop any remaining videos
+0 20 * * * pkill rpicam
+
+## Upload video (this also deletes the video from the pi)
+0 21 * * * bash /home/pi/recording/mobileSrc/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
+
+## Reboot every sunday after recordings are done
+## you need to make sure the pi is configured to run reboot without passwd
+01 20 * * SUN sudo /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
+
+## Delete cronlog.log every month
+34 20 1 * * date > /home/pi/recording/cronlog.log

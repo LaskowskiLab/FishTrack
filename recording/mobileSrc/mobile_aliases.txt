@@ -2,11 +2,16 @@
 
 alias schedule_ON="bash ~/recording/src/schedule_on.sh"
 alias schedule_OFF="bash ~/recording/src/schedule_off.sh"
+
 alias set_suffix="bash ~/recording/src/set_suffix.sh"
-alias check_suffix="cat ~/recording/suffix.txt"
-alias restart_recording="bash ~/recording/src/run_vid.sh 2>&1 > ~/recording/cronlog.log &"
+alias check_suffix="cat ~/recording/current.config | grep suffix" 
+
+#alias restart_recording="bash ~/recording/src/run_vid.sh 2>&1 >> ~/recording/cronlog.log &"
+alias restart_recording="bash ~/recording/mobielSrc/watch_mobile.sh ~/recording/current.config 2>&1 >> ~/recording/cronlog.log &"
+
 alias start_recording="bash ~/recording/mobileSrc/watch_mobile.sh"
 alias schedule_config="bash ~/recording/mobileSrc/schedule_config.sh"
-alias reset_schedule="bash ~/recording/src/schedule_off.sh"
+alias reset_schedule="crontab ~/recording/mobileSrc/crontabs/crontab-recording.txt"
 alias sync_code="rclone copy AmazonBox:/mobileSrc/ ~/recording/mobileSrc/"
+alias upload_vids="bash ~/recording/mobileSrc/sync_vids.sh"
 alias help_me="cat ~/recording/readme.txt"
