@@ -6,12 +6,15 @@
 config=${1-0}
 echo $config
 if [[ "$config" == "0" ]]; then
-    config="/home/pi/recording/mobileSrc/configs/default.config"
+    #config="/home/pi/recording/mobileSrc/configs/default.config"
+    config="/home/pi/recording/current.config"
 fi
 
 . $config
 echo "Using config:"
 cat $config
+
+cp $config /home/pi/recording/current.config
 
 if [ -n "${schedule}" ]; then
     echo "$schedule"
@@ -62,9 +65,10 @@ if [ -z ${format} ]; then
     format="h264"
 fi
 
-if [ -z ${project_suffix+x} ]; then
+
+if [ -z ${project_suffix} ]; then
     if [ -f "/home/pi/recording/suffix.txt" ]; then
-        project_suffix=$(cat ~/recording/suffix.txt)
+        project_suffix=$(cat /home/pi/recording/suffix.txt)
     else
         project_suffix='rogue'    
     fi
@@ -74,20 +78,16 @@ fi
 suffix=$project_suffix
 echo "suffix set to: " $suffix
 
-if [ -z ${directory+x} ]; then
-    if [ -f "/home/pi/recording/directory.txt" ]; then
-        data_dir=$(cat ~/recording/directory.txt)
-    else
-        data_dir='/home/pi/recording/'
-    fi
+if [ -z ${project_dir} ]; then
+    project_dir='/home/pi/recording/'
 else
-    data_dir=$directory
+    project_dir=$project_dir
 fi
 
-if [ "${data_dir: -1}" != "/" ]; then
-    data_dir=$data_dir"/"
+if [ "${project_dir: -1}" != "/" ]; then
+    project_dir=$project_dir"/"
 fi
-echo "directory set to: " $data_dir
+echo "directory set to: " $project_dir
 
 ## Find the name, regardless of the pi.
 pi_name=${HOSTNAME: -5}
