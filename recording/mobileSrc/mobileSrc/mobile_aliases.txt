@@ -1,6 +1,0 @@
-
-alias start_recording="bash /home/pi/recording/mobileSrc/watch_mobile.sh"
-alias schedule_recording="bash /home/pi/recording/mobileSrc/schedule_mobile.sh"
-alias clean_schedule="crontab /home/pi/recording/mobileSrc/crontabs/crontab-pause.txt"
-alias sync_configs="rclone copy AmazonBox:/mobileSrc ./recording/mobileSrc"
-alias help_me="cat /home/pi/recording/mobileSrc/readme.txt"
