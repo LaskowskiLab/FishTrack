@@ -140,13 +140,15 @@ def make_spots(input_video,output_video,write_video=True):
                 if max(d1,d2) > fMIN and max(d1,d2) < fMAX:
                     fishes.append(ellipse)
                     fcontours.append(c)
-                    #draw_ellipse(ellipse,gray)
+                    if VIZ:
+                        draw_ellipse(ellipse,gray)
                 #cv2.ellipse(frame,ellipse,(0,0,255),3)
         crop_contours(frame,contours,idx)
         if VIZ:
             cv2.drawContours(frame,contours,-1,(255,0,0),3)
 
             black_background = cv2.bitwise_and(gray,gray,mask=fg_mask)
+            cv2.imshow('Gray',gray)
             cv2.imshow('Mask',fg_mask)
             cv2.imshow('Contours',frame)
 
@@ -168,9 +170,9 @@ def make_spots(input_video,output_video,write_video=True):
         if idx % 100 == 0:
             print('Frame:',idx)
 
-        if idx > 2000:
+        if idx > 3000:
             pass
-            #break
+            break
         if write_video:
             out.write(frame)
 # Press Q on keyboard to  exit
