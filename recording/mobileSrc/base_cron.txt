@@ -1,0 +1,10 @@
+## Set some stuff to reboot
+## Upon reboot, check if it should be recording and respond accordingly
+0 2 * * * echo 0 > /home/pi/recording/restart_count.txt
+@reboot expr $(cat /home/pi/recording/restart_count.txt) + 1 > /home/pi/recording/restart_count.txt
+@reboot sleep 5 && bash /home/pi/recording/mobileSrc/check_reboot.sh
+@reboot sleep 300 && send_mail.sh "And we're back! $HOSTNAME rebooted 5 min ago"
+
+## Upload video (this also deletes the video from the pi)
+0 20 * * * bash /home/pi/recording/mobileSrc/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
+

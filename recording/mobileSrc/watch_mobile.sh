@@ -3,8 +3,7 @@
 
 config=${1-0}
 if [[ "$config" == 0 ]]; then
-    #config="/home/pi/recording/mobileSrc/configs/default.config"
-    config="/home/pi/recording/current.config"
+    config="/home/pi/recording/mobileSrc/configs/default.config"
 fi
 . $config
 
@@ -32,7 +31,7 @@ start_time=$(date "+%H%M")
 end_time=$(date -d "$duration minutes" +"%H%M")
 #echo $start_time
 while [[ $(date "+%H%M") -lt "1859" ]] && [[ $(date "+%H%M") -lt "$end_time" ]]; do
-    sleep 30 # wait 60 seconds, then check 
+    sleep 70 # wait 60 seconds, then check 
 
     current_time=$(date "+%y%m%d%H%M") ## might as well prevent weird edge cases
     sleep 2       # needs time to write a frame

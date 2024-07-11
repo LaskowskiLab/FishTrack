@@ -10,6 +10,8 @@ fi
 
 echo "Using config:"
 
+config=$(realpath $config)
+echo $config
 cat $config
 echo $schedule
 
@@ -19,7 +21,7 @@ if [ -z "$schedule" ]; then
 fi 
 
 
-cmd="watch_mobile.sh $config"
+cmd="bash /home/pi/recording/mobileSrc/watch_mobile.sh $config"
 
 dt=$(date "+%Y.%m.%d")
 header="## Lines added using schedule_mobile.sh on $dt"
