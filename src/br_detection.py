@@ -9,7 +9,11 @@ import parse_sleap
 
 def make_spots(input_video,output_video,write_video=True):
     cap = cv2.VideoCapture(input_video)
-    bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+    try:
+        bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+    except:
+        bg_subtractor = cv2.createBackgroundSubtractorMOG2()
+        
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -47,6 +51,7 @@ def make_spots(input_video,output_video,write_video=True):
 
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10))
         fg_mask = cv2.dilate(fg_mask, kernel, iterations=1)
+        fg_mask = cv2.erode(fg_mask, kernel, iterations=1)
 
         fg_mask = cv2.pyrUp(fg_mask)
         black_background = cv2.bitwise_and(gray,gray,mask=fg_mask)
@@ -147,9 +152,9 @@ if __name__ == "__main__":
         output_video_path = sys.argv[2]
     else:
         output_video_path = "./speedtest3.mp4"
-    #detections = make_spots(input_video_path,output_video_path,write_video=False)
-    detections = np.load('./example_detections_baby.npy')
-    flat_detections = clean_detections(detections)
+    detections = make_spots(input_video_path,output_video_path,write_video=True)
+    #detections = np.load('./example_detections_baby.npy')
+    #flat_detections = clean_detections(detections)
     #np.save('./example_detections_baby.npy',detections)
-    np.save('./flat_detections_baby.npy',flat_detections)
+    #np.save('./flat_detections_baby.npy',flat_detections)
 
