@@ -92,12 +92,21 @@ for d in $dir_list; do
                 h264_path=$h
                 h264_name="$(basename $h)"
                 video_path=$working_dir/${h264_name%h264}mp4
+                video_path2=$working_dir/${h264_name%.h264}.30fps.mp4
 
                 echo "$h264_path"
                 echo $video_path
 
                 ffmpeg -i $h264_path -c copy -crf 13 $video_path -y
+                ffmpeg -fflags +genpts -r 30 -i $h264_path -c:v copy $video_path2
+
                 rm $h264_path ## delete downloaded h264
+
+                if test -f "$video_path2"; then
+                    echo '30 fps Video made, copying to remote'
+                    rclone copy $video_path2 aperkes:pivideos/$d$s -P
+                    fi
+
                 if test -f "$video_path"; then
                     echo 'Video made, copying to remote'
                     rclone copy $video_path aperkes:pivideos/$d$s -P
