@@ -16,7 +16,7 @@ center_dict='/home/ammon/Documents/Scripts/FishTrack/src/center_dict.22.02.25.ts
 
 ## the trex has to happen inside the trex environment, so I may as well just do that now
 export PATH="/home/ammon/anaconda3/bin:$PATH"
-source activate sleap
+#source activate sleap
 
 DEBUG=false
 ### Get all the pis file list (filtered to include only names with "pi" in them)
@@ -41,7 +41,7 @@ for d in $dir_list; do
     #    continue
     #fi
     echo "running $d"
-    subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only | grep 20)
+    subdir_list=$(rclone lsf aperkes:pivideos/$d --dirs-only | grep 2024)
     echo $subdir_list
     if [ -z "$subdir_list" ]; then
         echo "No recent folders found, moving on"
