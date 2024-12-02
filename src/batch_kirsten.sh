@@ -104,7 +104,7 @@ for d in $dir_list; do
 
                 if test -f "$video_path2"; then
                     echo '30 fps Video made, copying to remote'
-                    rclone copy $video_path2 aperkes:pivideos/$d$s -P
+                    rclone move $video_path2 aperkes:pivideos/$d$s -P
                     fi
 
                 if test -f "$video_path"; then
@@ -140,8 +140,8 @@ for d in $dir_list; do
                 if test -f "$crop_path"; then
                     echo 'Video cropped, updating path,copying to remote'
                     rm $video_path
-                    video_path=$crop_path
-                    rclone move $video_path aperkes:pivideos/$d$s -P
+                    rclone move $crop_path aperkes:pivideos/$d$s -P
+                    #video_path=$crop_path
                 else
                     echo "Cropping failed. I'll just make a note here and move on..."
                     rm $video_path
