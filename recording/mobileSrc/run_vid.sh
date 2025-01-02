@@ -1,5 +1,7 @@
 #!/bin/sh
 
+pkill rpicam
+
 ## Run's video. Input argument are hours, minutes, and framerate
 # e.g., run_vid.sh 10 0 2 would record for 10 hours and 0 minutes at 2 fps
 n_hours=${1-12}
