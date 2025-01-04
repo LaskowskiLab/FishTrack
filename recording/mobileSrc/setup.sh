@@ -1,4 +1,4 @@
-cp ~/recording/mobileSrc ~/.bash_aliases
+cp ~/recording/mobileSrc/mobile_aliases.txt ~/.bash_aliases
 cp ~/recording/mobielSrc/readme.txt ~/recording
 echo "" >> ~/.bashrc
 echo "*** Welcome to $HOSTNAME ***" >> ~/.bashrc
