@@ -132,6 +132,7 @@ echo recording $directory_path$pi_name.$dt_stamp.$format
 mkdir -p $directory_path 
 
 touch $directory_path$pi_name.$dt_stamp.$format
+
 ln -fs $directory_path$pi_name.$dt_stamp.$format /home/pi/recording/current.link
 
 echo 0 > /home/pi/recording/current_size.txt
