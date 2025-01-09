@@ -53,4 +53,4 @@ echo $filesize > /home/pi/recording/current_size.txt
 rclone copy /home/pi/recording/$pi_name.recent_cap.jpg AmazonBox:/piManager/monitoring/ScreenCaps
 
 ## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
-rclone copy /home/pi/recording/$check_file AmazonBox:/piManager/monitoring/Checks
+rclone copy $check_file AmazonBox:/piManager/monitoring/Checks
