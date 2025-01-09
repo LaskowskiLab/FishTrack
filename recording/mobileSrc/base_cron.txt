@@ -25,6 +25,6 @@
 ## Upon reboot, check if it should be recording and respond accordingly
 @reboot expr $(cat /home/pi/recording/restart_count.txt) + 1 > /home/pi/recording/restart_count.txt
 @reboot sleep 5 && bash /home/pi/recording/mobileSrc/check_reboot.sh
-@reboot sleep 300 && send_mail.sh "And we're back! $HOSTNAME rebooted 5 min ago"
+@reboot sleep 300 && bash /home/pi/recording/mobileSrc/send_mail.sh "And we're back! $HOSTNAME rebooted 5 min ago"
 
 
