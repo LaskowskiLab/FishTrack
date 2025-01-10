@@ -32,7 +32,7 @@ start_time=$(date "+%H%M")
 end_time=$(date -d "$duration minutes" +"%y%m%dH%M")
 #echo $start_time
 ## Double brackets causes base errors for strings starting with 0. 
-while [ $(date "+%H%M") -lt "1859" ] && [ $(date "+y%m%d%H%M") -lt "$end_time" ]; do
+while [ $(date "+%H%M") -lt "1859" ] && [ $(date "+%y%m%d%H%M") -lt "$end_time" ]; do
     sleep 70 # wait 60 seconds, then check 
 
     current_time=$(date "+%y%m%d%H%M") ## might as well prevent weird edge cases
