@@ -12,7 +12,7 @@ bash /home/pi/recording/mobileSrc/set_suffix.sh $suffix
 ## To prevent annoying messages, this only turns it on in the evening
 current_time=$(date +%H:%M)
 if [[ "$current_time" > "18:15" ]]; then
-    crontab /home/pi/recording/mobileSrc/crontabs/crontab-pi.txt
+    crontab /home/pi/recording/mobileSrc/crontabs/base_cron.txt
 else
-    crontab /home/pi/recording/mobileSrc/crontabs/crontab-pi.txt | at 18:15
+    crontab /home/pi/recording/mobileSrc/crontabs/base_cron.txt | at 18:15
 fi
