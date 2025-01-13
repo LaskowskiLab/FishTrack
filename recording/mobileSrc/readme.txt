@@ -27,7 +27,7 @@ To check if the camera is currently doing something
   pgrep rpicam
 
 To stop the camera (assuming it's not zombified) 
-  pkill rpicam
+  stop_recording
 
 To restart pi
   sudo reboot
