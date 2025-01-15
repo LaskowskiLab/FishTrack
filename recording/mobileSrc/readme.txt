@@ -8,8 +8,12 @@ To start recording right now:
 for custom parameters, include a config file, e.g., 
   start_recording ~/recording/mobileSrc/configs/default.config
 
+if you need to restart the recording scheduled recording: 
+    restart_config
+
 to update source code (including configs) from box:
   sync_code
+*** Note, that this won't set your crontab, readme, or aliases ***
 
 to upload videos to Box:
   upload_vids
