@@ -29,7 +29,7 @@ fi
 duration=$((hours*60 + minutes - 1))
 #start_time=$(date "+%H")*60 + $(date "+%M")
 start_time=$(date "+%H%M")
-end_time=$(date -d "$duration minutes" +"%y%m%dH%M")
+end_time=$(date -d "$duration minutes" +"%y%m%d%H%M")
 #echo $start_time
 ## Double brackets causes base errors for strings starting with 0. 
 while [ $(date "+%H%M") -lt "1859" ] && [ $(date "+%y%m%d%H%M") -lt "$end_time" ]; do
