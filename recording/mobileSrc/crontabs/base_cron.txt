@@ -4,7 +4,7 @@
 0 2 * * * echo 0 > /home/pi/recording/restart_count.txt
 
 ## Syncronize schedule
-0 0 * * * bash /home/pi/recording/mobileSrc/syncSchedule.sh >> /home/pi/recording/cronlog.log 2>&1
+0 23 * * * bash /home/pi/recording/mobileSrc/syncSchedule.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ### Check that space and rclone seem good
 0 8 * * * bash /home/pi/recording/mobileSrc/check_space.sh
