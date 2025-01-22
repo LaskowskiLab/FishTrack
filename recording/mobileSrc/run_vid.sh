@@ -26,10 +26,15 @@ if [ "${data_dir: -1}" != "/" ]; then
 fi
 
 ## Find the name, regardless of the pi.
-pi_name=${HOSTNAME: -5}
+pi_name=${HOSTNAME: -4}
 if [[ $pi_name == "rypi" ]]; then
     pi_name='pi01'
 fi
+
+if [ -z "$pi_name" ]; then
+    pi_name=$HOSTNAME
+fi
+
 
 ## The obvious behavior is to say 1 hour and 0 minutes, 
 ##   or 0 hours and 10 minutes. 

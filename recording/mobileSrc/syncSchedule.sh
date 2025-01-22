@@ -3,6 +3,9 @@ recordingDir="/home/pi/recording/"
 srcDir=$recordingDir"mobileSrc/"
 rclone copy AmazonBox:piManager/ScheduleTest.csv $srcDir
 pi_name=${HOSTNAME: -4}
+if [ -z "$pi_name" ]; then
+    pi_name=$HOSTNAME
+fi
 #piLine="$(cat $srcDir"ScheduleTest.csv" | grep "pi24")"
 piLine="$(cat $srcDir"ScheduleTest.csv" | grep $pi_name)"
 echo $piLine
@@ -28,7 +31,8 @@ elif [ -f $srcDir"configs/"$config ]; then
     bash $srcDir"schedule_config.sh" $srcDir"configs/"$config
 else
     echo Count not find config
-    bash $srcDir"send_mail.sh" "***Warning*** Could not find config for $pi"
+    bash $srcDir"send_mail.sh" "***Warning*** Could not find specified config for $pi, using default.config instead"
+    bash $srcDir"schedule_on.sh"
 fi
 
 bash $srcDir"set_suffix.sh" $suffix

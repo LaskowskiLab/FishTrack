@@ -106,6 +106,11 @@ else
     num=${HOSTNAME: -2}
     pi_name=${pi_name//\*/$num} ## replace * with num
 fi
+
+if [ -z "$pi_name" ]; then
+    pi_name=$HOSTNAME
+fi
+
 echo $pi_name
 ## The obvious behavior is to say 1 hour and 0 minutes, 
 ##   or 0 hours and 10 minutes. 

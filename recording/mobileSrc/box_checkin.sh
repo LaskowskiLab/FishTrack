@@ -5,6 +5,9 @@
 
 ## Find the name, regardless of the pi.
 pi_name=${HOSTNAME: -4}
+if [ -z "$pi_name" ]; then
+    pi_name=$HOSTNAME
+fi
 
 scheduled=${1-1}
 
