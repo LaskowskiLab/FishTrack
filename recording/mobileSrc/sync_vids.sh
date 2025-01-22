@@ -25,6 +25,12 @@ else
     pi_name=${pi_name//\*/$num} ## replace * with num
 fi
 
+### If the above failed, just use the hostname
+if [ -z "$pi_name" ]; then
+    pi_name=$HOSTNAME
+fi
+
+
 
 ## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
 rclone move /home/pi/recording --include "*.$format" --max-depth 2 --transfers 1 --delete-empty-src-dirs AmazonBox:/pivideos/$pi_name
