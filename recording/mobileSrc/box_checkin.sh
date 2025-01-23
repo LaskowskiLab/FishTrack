@@ -37,7 +37,7 @@ rm /home/pi/recording/recent_cap.jpg
 if [[ $(pgrep rpicam) != '' ]]; then
     ffmpeg -framerate 1 -i /home/pi/recording/current.link -ss $dseconds -vframes 1 -update true /home/pi/recording/$pi_name.recent_cap.jpg -y
 else
-    libcamera-still -q 20 -t 1 -o --lens-position 2.3 /home/pi/recording/$pi_name.recent_cap.jpg --nopreview
+    libcamera-still -q 20 -t 1 --lens-position 2.3 -o /home/pi/recording/$pi_name.recent_cap.jpg --nopreview
 fi
 
 filename=$(ls -lrt /home/pi/recording/current.link | nawk '{print $11}')
