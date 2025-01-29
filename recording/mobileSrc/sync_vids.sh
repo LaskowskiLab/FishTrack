@@ -4,11 +4,11 @@
 ## It then combines all the images into a .zip and drops it in recording
 
 config=${1-0}
-echo $config
 if [[ "$config" == "0" ]]; then
     config="/home/pi/recording/mobileSrc/current.config"
 fi
 
+echo "syncing based on $config"
 
 . $config
 
@@ -33,4 +33,4 @@ fi
 
 
 ## Copies and deletes the *.zip files in the recording directory (without checking sub directories)
-rclone move /home/pi/recording --include "*.$format" --max-depth 2 --transfers 1 --delete-empty-src-dirs AmazonBox:/pivideos/$pi_name
+rclone move /home/pi/recording --include "*.$format" --max-depth 2 --transfers 1 --delete-empty-src-dirs AmazonBox:/pivideos/$pi_name -P
