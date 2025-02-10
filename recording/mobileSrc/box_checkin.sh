@@ -12,6 +12,7 @@ fi
 scheduled=${1-1}
 
 hour=$(date +"%H")
+hour=${hour#0}
 dhour="$((hour-6))"
 dseconds="$((dhour*60*60 + 10))"
 
