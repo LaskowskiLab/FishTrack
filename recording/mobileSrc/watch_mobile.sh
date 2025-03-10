@@ -38,6 +38,8 @@ while [ $(date "+%H%M") -lt "1859" ] && [ $(date "+%y%m%d%H%M") -lt "$end_time" 
     current_time=$(date "+%y%m%d%H%M") ## might as well prevent weird edge cases
     sleep 2       # needs time to write a frame
     file_time=$(date -r $filename "+%y%m%d%H%M") # could run into problems at y3k
+    restart_count=$(cat /home/pi/recording/restart_count.txt)
+
     #echo $current_time $file_time
     if [ "$current_time" -gt "$file_time" ]; then # File is not growing! It's a zombie!!
         if [ "$restart" == 1 ] && [ "$restart_count" -lt "10" ] ; then
