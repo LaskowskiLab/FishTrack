@@ -417,7 +417,6 @@ if __name__ == '__main__':
             for d in data_line:
                 f.write(str(d))
                 f.write(',')
-
     if args.in_vid is not None:
         if args.visualize or args.out_vid is not None:
             base_arrays.append(m_track)
