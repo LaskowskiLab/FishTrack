@@ -1,5 +1,7 @@
 #!/bin/sh
 
+pkill -2 rpicam
+
 ## Run's video. Input argument are hours, minutes, and framerate
 # e.g., run_vid.sh 10 0 2 would record for 10 hours and 0 minutes at 2 fps
 n_hours=${1-12}
@@ -24,10 +26,15 @@ if [ "${data_dir: -1}" != "/" ]; then
 fi
 
 ## Find the name, regardless of the pi.
-pi_name=${HOSTNAME: -5}
+pi_name=${HOSTNAME: -4}
 if [[ $pi_name == "rypi" ]]; then
     pi_name='pi01'
 fi
+
+if [ -z "$pi_name" ]; then
+    pi_name=$HOSTNAME
+fi
+
 
 ## The obvious behavior is to say 1 hour and 0 minutes, 
 ##   or 0 hours and 10 minutes. 

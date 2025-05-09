@@ -10,9 +10,9 @@ bash /home/pi/recording/mobileSrc/set_suffix.sh $suffix
 
 ## Set crontab to the schedule that runs the pi
 ## To prevent annoying messages, this only turns it on in the evening
-current_time=$(date +%H:%M)
-if [[ "$current_time" > "18:15" ]]; then
-    crontab /home/pi/recording/mobileSrc/crontabs/crontab-pi.txt
+current_time=$(date +"%H")
+if [[ "$current_time" > "18" ]]; then
+    crontab /home/pi/recording/mobileSrc/crontabs/crontab-on.txt
 else
-    crontab /home/pi/recording/mobileSrc/crontabs/crontab-pi.txt | at 18:15
+    crontab /home/pi/recording/mobileSrc/crontabs/crontab-on.txt | at 1900
 fi

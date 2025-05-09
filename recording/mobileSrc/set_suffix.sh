@@ -2,3 +2,4 @@
 suffix=${1:-rogue}
 
 echo $suffix >> ~/recording/current.config
+echo $suffix > ~/recording/suffix.txt

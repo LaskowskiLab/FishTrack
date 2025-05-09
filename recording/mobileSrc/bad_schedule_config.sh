@@ -3,37 +3,34 @@
 ## Run's video. Input argument are hours, minutes, and framerate
 # e.g., run_vid.sh 10 0 2 would record for 10 hours and 0 minutes at 2 fps
 
-pkill -2 rpicam
-config=${1-0}
-echo $config
-if [[ "$config" == "0" ]]; then
-    config="/home/pi/recording/mobileSrc/configs/default.config"
+config={$1=0}
+if [[ "$config" == 0 ]]; then
+    . /home/pi/mobileSrc/configs/default.config
+else
+    . $config
 fi
-
-. $config
 echo "Using config:"
 cat $config
-cp $config /home/pi/recording/mobileSrc/current.config
 
-if [ -n "${schedule}" ]; then
-    echo "$schedule"
-    echo "WARNING: you entered a schedule in the config, but your video will start right now"
-    echo "did you mean to schedule_recording ?"
-fi
+if [ -z $on_time ]; then
+    echo "WARNING: You are trying to schedule a recording, but there's no schedule in your config. Please add some times in the on_time= line"
+    exit 1; 
+fi 
+
 ## Check for some necessary variables and set them if they don't exist
-if [ -z ${hours} ]; then
+if [ -z ${n_hours} ]; then
     echo "hours not set, using default: 0"
-    hours=0
+    n_hours=0
 fi
 
-if [ -z ${minutes} ]; then
+if [ -z ${n_minutes} ]; then
     echo "minutes not set, using default: 5"
-    minutes=5
+    n_minutes=5
 fi
 
-if [ -z ${fps} ]; then
+if [ -z ${f_rate} ]; then
     echo "frame rate not set, using default: 25"
-    fps=25
+    f_rate=25
 fi
 
 if [ -z ${width} ]; then
@@ -50,39 +47,25 @@ if [ -z ${quality} ]; then
     quality=17
 fi
 
-if [ -z ${preview} ]; then
-    preview='--nopreview'
-elif [ "$preview" == "1" ]; then
-    preview='--preview'
-fi
-
 if [ -z ${verbose} ]; then
     verbose=0
 fi
 
 if [ -z ${format} ]; then
     format="h264"
-fi
 
-if [ -z ${focus} ]; then
-    focus="default"
-fi
 
-if [ -z ${awbg} ]; then
-    awbg="0,0"
-fi
-
-if [ -z ${project_suffix+x} ]; then
+if [ -z ${suffix+x} ]; then
     if [ -f "/home/pi/recording/suffix.txt" ]; then
-        project_suffix=$(cat ~/recording/suffix.txt)
+        suffix=$(cat ~/recording/suffix.txt)
     else
-        project_suffix='rogue'    
+        suffix='rogue'    
     fi
 else
     echo "Suffix found!"
 fi
-suffix=$project_suffix
 echo "suffix set to: " $suffix
+
 
 if [ -z ${directory+x} ]; then
     if [ -f "/home/pi/recording/directory.txt" ]; then
@@ -96,22 +79,15 @@ fi
 
 if [ "${data_dir: -1}" != "/" ]; then
     data_dir=$data_dir"/"
-fi
+
 echo "directory set to: " $data_dir
 
-echo $pi_name
-if [ -z ${pi_name} ]; then
-    pi_name=${HOSTNAME: -4}
-else
-    num=${HOSTNAME: -2}
-    pi_name=${pi_name//\*/$num} ## replace * with num
+## Find the name, regardless of the pi.
+pi_name=${HOSTNAME: -5}
+if [[ $pi_name == "rypi" ]]; then
+    pi_name='pi01'
 fi
 
-if [ -z "$pi_name" ]; then
-    pi_name=$HOSTNAME
-fi
-
-echo $pi_name
 ## The obvious behavior is to say 1 hour and 0 minutes, 
 ##   or 0 hours and 10 minutes. 
 
@@ -131,21 +107,30 @@ directory_path=/home/pi/recording/$date_stamp.$suffix/
 #directory_path=/home/pi/recording/$date_stamp/ 
 
 ## Make directory for images
-echo recording $directory_path$pi_name.$dt_stamp.$format
+echo recording $directory_path$pi_name.$dt_stamp.h264
 
 # -p will fill in missing directories
 mkdir -p $directory_path 
 
-touch $directory_path$pi_name.$dt_stamp.$format
-
-ln -fs $directory_path$pi_name.$dt_stamp.$format /home/pi/recording/current.link
+touch $directory_path$pi_name.$dt_stamp.h264
+ln -fs $directory_path$pi_name.$dt_stamp.h264 /home/pi/recording/current.link
 
 echo 0 > /home/pi/recording/current_size.txt
 ## Add the -n flag or --nopreview to turn off preview, this might help with dropped frames
 #raspistill -t 43200000 -tl 1000 --nopreview -vf -hf -q 20 -h 500 -w 500 -o $directory_path$pi_name.$year_stamp.%01d.jpg -dt
-#raspivid --width 1080 --height 1080 --framerate $fps --qp 17 --nopreview --timeout $((($hours*60 + $minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.h264
+#raspivid --width 1080 --height 1080 --framerate $f_rate --qp 17 --nopreview --timeout $((($n_hours*60 + $n_minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.h264
 # with new pi's this code will work: 
-rpicam-vid --width $width --height $height --framerate $fps --quality $quality --lens-position $focus --awbg $awbg $preview --timeout $((($hours*60 + $minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.$format -v $verbose
+
+## Schedule lines at times specified in config
+cmd="rpicam-vid --width $width --height $height --framerate $f_rate --quality $quality --nopreview --timeout $((($n_hours*60 + $n_minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.$format -v $verbose"
+
+cmd="watch_mobile.sh $config"
+for h_min in $schedule; do
+    min="${str: -2}"
+    hour="${h_min%$min}"
+line="$hour $min * * * $cmd"
+(crontab -u $(whoami) -l; echo "$line" ) | crontab -u $(whoami) -
+
 
 wait
 ## Use this line if the video will be too big:
