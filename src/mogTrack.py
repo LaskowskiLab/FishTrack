@@ -84,8 +84,12 @@ def make_spots(input_video,output_video,write_video=True):
     cap = cv2.VideoCapture(input_video)
     #bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
     bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
-    n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    if input_video is not 0:
+        n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
+    else:
+        fps = 24
+        n_frames = fps * 60
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -103,7 +107,7 @@ def make_spots(input_video,output_video,write_video=True):
     MAX_DETECTIONS = 50
     detections = np.full([n_frames,MAX_DETECTIONS,2],np.nan)
     idx = 0
-    while(cap.isOpened()):
+    while (cap.isOpened()) and count < n_frames:
         # Capture frame-by-frame
         #if count % 100 == 0:
         #    #print('frame:',count)
@@ -203,6 +207,8 @@ def clean_detections(detections):
 
 if __name__ == "__main__":
     input_video_path = sys.argv[1]
+    if input_video_path == '0':
+        input_video_path = 0
     if len(sys.argv) >= 3:
         output_video_path = sys.argv[2]
     else:
