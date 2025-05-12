@@ -116,12 +116,17 @@ def make_spots(input_video,output_video,write_video=True):
         if VIZ:
             cv2.imshow('Frame',frame)
 
-        gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        bal = white_balance(frame)
+        if False:
+            gray = cv2.cvtColor(bal,cv2.COLOR_BGR2GRAY)
+        else:
+            gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
         small = cv2.pyrDown(gray)
         fg_mask = bg_subtractor.apply(small)
 
         if VIZ:
             cv2.imshow('raw mask',fg_mask)
+            cv2.imshow('balanced',bal)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
         fg_mask = cv2.dilate(fg_mask, kernel, iterations=1)
         fg_mask = cv2.erode(fg_mask, kernel, iterations=2)
@@ -200,6 +205,15 @@ def clean_detections(detections):
     good_detections = strip_peaks(detections)
     print(good_detections.shape)
     return good_detections
+
+def white_balance(img):
+    result = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    avg_a = np.average(result[:, :, 1])
+    avg_b = np.average(result[:, :, 2])
+    result[:, :, 1] = result[:, :, 1] - ((avg_a - 128) * (result[:, :, 0] / 255.0) * 1.1)
+    result[:, :, 2] = result[:, :, 2] - ((avg_b - 128) * (result[:, :, 0] / 255.0) * 1.1)
+    result = cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
+    return result
 
 if __name__ == "__main__":
     input_video_path = sys.argv[1]
