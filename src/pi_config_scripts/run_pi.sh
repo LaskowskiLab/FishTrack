@@ -1,6 +1,6 @@
 
-pi_family=${V0}
 pi=${1-1}
+pi_family=${V0-2}
 
 i=pi@$pi_family$pi.local
 
