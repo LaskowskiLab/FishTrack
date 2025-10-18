@@ -80,7 +80,8 @@ if __name__ == "__main__":
     np.save('test_interp.npy',track_interpolated)
     """
     
-    CENTER = [375,486]
+    #CENTER = [375,486]
+    CENTER = [440,515]
     if args.center_list == None:
         print('no center dict given..')
         print('using default:',CENTER)

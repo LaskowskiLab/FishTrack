@@ -11,7 +11,8 @@ import parse_sleap
 
 from matplotlib import pyplot as plt
 
-CENTER = [349,425]
+#CENTER = [349,425]
+CENTER = [440,515]
 #CENTER = [400,450]
 
 ## Code which takes .h5 files (output from SLEAP) and processes it to usable data

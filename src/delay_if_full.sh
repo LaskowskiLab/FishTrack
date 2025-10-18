@@ -7,7 +7,7 @@ percentage="${space%\% /}"
 percentage="${percentage##* }"
 
 
-if [ $percentage -gt "90" ]; then
+if [ $percentage -gt "70" ]; then
     echo "waiting..."
     sleep 1800
 fi
