@@ -12,8 +12,8 @@ for file in "$check_dir"/*; do
         v_n=${file##*V}
         v_n=${v_n%%.*}
         pi='V'$v_n
-        #echo "Skipping $file, $pi"
-        #continue
+        echo "Skipping $file, $pi"
+        continue
     else
         pi_n=${file##*pi}
         pi_n=${pi_n%%.*}
@@ -39,6 +39,10 @@ for file in "$check_dir"/*; do
         if [[ "$second_line" == "$match_string" ]]; then
             echo "$file Not recording!"
             pi_sched=$(grep "$pi" $schedule_file)
+            if [ $pi_sched == '' ]; then
+                echo no line found
+                continue
+            fi
 
             #echo $pi_sched
             #off_check=$(grep ",off," $pi_sched)
@@ -56,7 +60,7 @@ for file in "$check_dir"/*; do
 
 ## Now check the hour difference, knowing whether it should be scheduled
         if [[ $hour_diff -gt 2 ]]; then
-            if [[ "$pi_sched" != *",off,"* ]]; then
+            if [[ "$pi_sched" == *",on,"* ]]; then
                 echo "Should be recording!"
                 bash ~/Documents/Scripts/FishTrack/src/send_mail.sh "*Warning* $pi should be recording, but hasn't checked in for over 2 hours"
             elif [[ $hour_diff -gt 24 ]]; then

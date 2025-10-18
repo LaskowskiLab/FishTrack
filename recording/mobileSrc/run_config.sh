@@ -68,6 +68,10 @@ if [ -z ${focus} ]; then
     focus="default"
 fi
 
+if [ -z ${exposure} ]; then
+    exposure="0.0"
+fi
+
 if [ -z ${awbg} ]; then
     awbg="0,0"
 fi
@@ -145,7 +149,7 @@ echo 0 > /home/pi/recording/current_size.txt
 #raspistill -t 43200000 -tl 1000 --nopreview -vf -hf -q 20 -h 500 -w 500 -o $directory_path$pi_name.$year_stamp.%01d.jpg -dt
 #raspivid --width 1080 --height 1080 --framerate $fps --qp 17 --nopreview --timeout $((($hours*60 + $minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.h264
 # with new pi's this code will work: 
-rpicam-vid --width $width --height $height --framerate $fps --quality $quality --lens-position $focus --awbg $awbg $preview --timeout $((($hours*60 + $minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.$format -v $verbose
+rpicam-vid --width $width --height $height --framerate $fps --quality $quality --ev $exposure --lens-position $focus --awbg $awbg $preview --timeout $((($hours*60 + $minutes)*60*1000)) --output $directory_path$pi_name.$dt_stamp.$format -v $verbose
 
 wait
 ## Use this line if the video will be too big:

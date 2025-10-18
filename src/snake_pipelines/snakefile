@@ -3,8 +3,8 @@ import sys
 #VIDEO_LIST = "path_lists/jay.adults.videos.txt"
 #PATH_LIST = 'path_lists/jay.adults.paths.txt'
 
-VIDEO_LIST = "path_lists/jay.babies.unfinished.videos.sorted.txt"
-PATH_LIST = 'path_lists/jay.babies.unfinished.paths.sorted.txt'
+VIDEO_LIST = "path_lists/jay.sailfins.videos.txt"
+PATH_LIST = 'path_lists/jay.sailfins.paths.txt'
 
 #VIDEO_LIST = "path_lists/jay.babies.videos.first.csv"
 #PATH_LIST = 'path_lists/jay.babies.paths.first.csv'
@@ -31,18 +31,18 @@ vid_to_path = dict(zip(VIDEOS,BOX_PATHS))
 rule all:
     input:
         #expand("snake/videos/{video}.mp4",video=VIDEOS),
-        expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
-        #expand("snake/exerpts/{video}.5s.mp4",video=VIDEOS),
+        #expand("snake/crops/{video}.crop.mp4",video=VIDEOS),
+        expand("snake/exerpts/{video}.5s.mp4",video=VIDEOS),
         expand("snake/sleap/{video}.predictions.slp",video=VIDEOS),
-        expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
+        #expand("snake/sleap/{video}.predictions.squished.slp",video=VIDEOS),
         expand("snake/h5/{video}.h5",video=VIDEOS),
-        expand("snake/results/tracks/{video}.br_detection.npy",video=VIDEOS),
-        expand("snake/results/tracks/{video}.sleap.npy",video=VIDEOS),
-        expand("snake/results/tracks/{video}.combined.npy",video=VIDEOS),
-        expand("snake/results/overlays/{video}.overlay.mp4",video=VIDEOS),
-        expand("snake/results/csv/{video}.csv",video=VIDEOS),
+        #expand("snake/results/tracks/{video}.br_detection.npy",video=VIDEOS),
+        #expand("snake/results/tracks/{video}.sleap.npy",video=VIDEOS),
+        #expand("snake/results/tracks/{video}.combined.npy",video=VIDEOS),
+        #expand("snake/results/overlays/{video}.overlay.mp4",video=VIDEOS),
+        #expand("snake/results/csv/{video}.csv",video=VIDEOS),
         ## Expand these two to have uploading work
-        #expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
+        expand("snake/results/logs/{video}.crop.log",video=VIDEOS),
         expand("snake/results/logs/{video}.sleap.log",video=VIDEOS)
 
 rule copy_video:
@@ -53,10 +53,11 @@ rule copy_video:
         log = "snake/results/logs/{video}.log"
     resources: bandwidth=1 
     priority: 0
-    run:
-## Having this as two steps helps deal with some weirdness in downloading
-        shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/tmp/ 2> {params.log}")
-        shell("mv snake/tmp/{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4")
+    shell:
+        ## Having this as two steps helps deal with some weirdness in downloading
+        "bash ~/Documents/Scripts/FishTrack/src/delay_if_full.sh;"
+        "rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/tmp/;"
+        "mv snake/tmp/{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4;"
         #shell("rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4 -P")
         #shell("echo rclone copy aperkes:{params.remote}{wildcards.video}.mp4 snake/videos/{wildcards.video}.mp4")
         #shell("touch snake/videos/{wildcards.video}.mp4")
@@ -65,21 +66,22 @@ rule copy_video:
 rule get_exerpt:
     input:  "snake/videos/{video}.mp4" 
     output: "snake/exerpts/{video}.5s.mp4"
-    run:
-        shell("ffmpeg -ss 60 -t 5 -i {input} snake/exerpts/{wildcards.video}.5s.mp4 -y")
+    threads: 4
+    shell:
+        "ffmpeg -ss 60 -t 5 -i {input} snake/exerpts/{wildcards.video}.5s.mp4 -y -hide_banner -loglevel error;"
 
 rule crop_video:
     output: temporary("snake/crops/{video}.crop.mp4")
     input:  "snake/videos/{video}.mp4" 
     priority: 9
-    threads: 2
+    threads: 4
     conda: "dev"
     params:
         log = "snake/results/logs/{video}.log"
     shell:
         "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -x /home/ammon/Documents/Scripts/FishTrack/src/crop_dicts/crop_dict.23.10.02.tsv -m -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log};"
 ## Use these lines to get shorter crops for quicker processing
-        "ffmpeg -ss 60 -i snake/crops/{wildcards.video}.crop.mp4 snake/crops/{wildcards.video}.tmp.mp4 -y;"
+        "ffmpeg -ss 60 -i snake/crops/{wildcards.video}.crop.mp4 snake/crops/{wildcards.video}.tmp.mp4 -y -hide_banner -loglevel error;"
         "mv snake/crops/{wildcards.video}.tmp.mp4 snake/crops/{wildcards.video}.crop.mp4;"
 
 rule upload_crop:
@@ -90,15 +92,14 @@ rule upload_crop:
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
-    run:
-        shell("rclone copy {input} aperkes:{params.remote} 2>> {params.log}")
-        shell("echo uploaded wildcards.video >> snake/results/logs/{wildcards.video}.crop.log")
+    shell:
+        "rclone copy {input} aperkes:{params.remote} 2>> {params.log};"
+        "echo uploaded wildcards.video >> snake/results/logs/{wildcards.video}.crop.log;"
 
 rule spot_video:
     output: "snake/results/tracks/{video}.br_detection.npy"
     input:  "snake/crops/{video}.crop.mp4"
     priority: 25 
-    threads: 2
     conda: "dev"
     params:
         log = "snake/results/logs/{video}.log"
@@ -113,8 +114,8 @@ rule inference:
     output: "snake/sleap/{video}.predictions.slp"
     input:  "snake/crops/{video}.crop.mp4"
     resources: gpu=1
-    threads: 2
     priority: 100
+    threads: 2
     conda:
         "sleap"
     params:
@@ -132,8 +133,8 @@ rule inference:
 rule tidy_slp:
     output: temporary("snake/sleap/{video}.predictions.squished.slp")
     input: "snake/sleap/{video}.predictions.slp"
-    threads: 2
     priority: 90 
+    threads: 2
     params:
         log = "snake/results/logs/{video}.log"
     conda: "sleap"
@@ -144,6 +145,7 @@ rule convert_h5:
     output: temporary("snake/h5/{video}.h5")
     input:  "snake/sleap/{video}.predictions.squished.slp"
     priority: 91 
+    threads: 2
     params:
         log = "snake/results/logs/{video}.log"
     conda:
@@ -163,12 +165,12 @@ rule upload_slp_files:
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
-    run:
-        shell("rclone copy {input.h5} aperkes:{params.remote}{wildcards.video}.h5 2>> {params.log}")
-        shell("rclone copy {input.sleap} aperkes:{params.remote}{wildcards.video}.predictions.slp 2>> {params.log}")
+    shell:
+        "rclone copy {input.h5} aperkes:{params.remote}{wildcards.video}.h5 2>> {params.log};"
+        "rclone copy {input.sleap} aperkes:{params.remote}{wildcards.video}.predictions.slp 2>> {params.log};"
 
         #shell("echo rclone copy {input} aperkes:{params.remote}{wildcards.video}.h5")
-        shell("echo uploaded {wildcards.video} > snake/results/logs/{wildcards.video}.sleap.log")
+        "echo uploaded {wildcards.video} > snake/results/logs/{wildcards.video}.sleap.log;"
 
 rule quad_h5:
     output: 
@@ -212,7 +214,6 @@ rule quantify_track:
 rule overlay_track:
     output:
         "snake/results/overlays/{video}.overlay.mp4"
-    threads: 2
     input:
         track = "snake/results/tracks/{video}.combined.npy",
         video = "snake/crops/{video}.crop.mp4"

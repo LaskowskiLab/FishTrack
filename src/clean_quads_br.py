@@ -11,7 +11,8 @@ def make_spots(input_video,output_video=None,write_video=True):
     if output_video is None and write_video:
         output_video = input_video.replace('.mp4','br_tracked.mp4')
     cap = cv2.VideoCapture(input_video)
-    bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+    #bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
+    bg_subtractor = cv2.createBackgroundSubtractorMOG2()
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -114,10 +115,11 @@ def flatten_by_quads(quad_detections):
         track_occupancy = ~np.isnan(quad_detections[q,:,:,0])
         frame_occupancy = np.sum(track_occupancy,1)
         overlapping_frames = frame_occupancy > 1
+## Need to initialize the first frame
         if frame_occupancy[0] == 0:
             quad_single_track[0] = [0,0]
         else:
-            quad_single_track[0] = np.nanmean(quad_detections[0],0)
+            quad_single_track[0] = np.nanmean(quad_detections[0],axis=(0,1))
         last_detection = quad_single_track[0]
         for f in range(1,n_frames):
             if frame_occupancy[f] == 0:
