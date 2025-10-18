@@ -17,7 +17,6 @@ with open(PATH_LIST) as f:
 
 M_CENTERED = "/data/sleapModels/leap.take2.centered_instance.403"
 M_CENTROID = "/data/sleapModels/leap.take2.centroid.403"
-CENTER_DICT = "/home/ammon/Documents/Scripts/FishTrack/src/center_dicts/center_dict.23.10.02.tsv" 
 KEY_TSV = "/data/tracking/jay.babies/pi.babies.key.tsv"
 PROJECT_CSV = "/home/ammon/Documents/Scripts/FishTrack/snake/results/jay.babies.csv"
 
@@ -66,6 +65,7 @@ rule copy_video:
 rule get_exerpt:
     input:  "snake/videos/{video}.mp4" 
     output: "snake/exerpts/{video}.5s.mp4"
+    priority: 10 
     threads: 4
     shell:
         "ffmpeg -ss 60 -t 5 -i {input} snake/exerpts/{wildcards.video}.5s.mp4 -y -hide_banner -loglevel error;"
@@ -79,7 +79,7 @@ rule crop_video:
     params:
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/crop_by_tags.py -i {input} -x /home/ammon/Documents/Scripts/FishTrack/src/crop_dicts/crop_dict.23.10.02.tsv -m -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log};"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/cropByCenter.py -i {input} -o snake/crops/{wildcards.video}.crop.mp4 2> {params.log};"
 ## Use these lines to get shorter crops for quicker processing
         "ffmpeg -ss 60 -i snake/crops/{wildcards.video}.crop.mp4 snake/crops/{wildcards.video}.tmp.mp4 -y -hide_banner -loglevel error;"
         "mv snake/crops/{wildcards.video}.tmp.mp4 snake/crops/{wildcards.video}.crop.mp4;"
@@ -88,7 +88,7 @@ rule upload_crop:
     output: "snake/results/logs/{video}.crop.log"
     input:  "snake/crops/{video}.crop.mp4"
     resources: bandwidth=1
-    priority: 3
+    priority: 99
     params:  
         remote = lambda wildcards: vid_to_path[wildcards.video],
         log = "snake/results/logs/{video}.log"
@@ -179,10 +179,9 @@ rule quad_h5:
     priority: 27 
     conda: "dev"
     params:
-        center = CENTER_DICT,
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/clean_quads_h5.py -i {input} -o snake/results/tracks/{wildcards.video}.sleap.npy -x {params.center} 2>> {params.log};"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/clean_quads_h5.py -i {input} -o snake/results/tracks/{wildcards.video}.sleap.npy 2>> {params.log};"
 
 rule viterbi:
     output:
@@ -193,10 +192,9 @@ rule viterbi:
     priority: 28 
     conda: "dev"
     params:
-        center = CENTER_DICT,
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/viterbi.py -a {input.sleap_track} -b {input.br_track} -o snake/results/tracks/{wildcards.video}.combined.npy -x {params.center} 2>> {params.log};"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/viterbi.py -a {input.sleap_track} -b {input.br_track} -o snake/results/tracks/{wildcards.video}.combined.npy 2>> {params.log};"
 
 rule quantify_track:
     output:
@@ -205,11 +203,10 @@ rule quantify_track:
     priority: 29
     conda: "dev"
     params:
-        center = CENTER_DICT,
         key = KEY_TSV,
         log = "snake/results/logs/{video}.log"
     shell:
-        "python /home/ammon/Documents/Scripts/FishTrack/src/quantify_track.py -i {input} -o snake/results/csv/{wildcards.video}.csv -p snake/results/jay.babies.csv -x {params.center} -k {params.key} 2>> {params.log};"
+        "python /home/ammon/Documents/Scripts/FishTrack/src/quantify_track.py -i {input} -o snake/results/csv/{wildcards.video}.csv -p snake/results/jay.babies.csv -k {params.key} 2>> {params.log};"
 
 rule overlay_track:
     output:
@@ -223,5 +220,5 @@ rule overlay_track:
     conda: "dev"
     shell:
         "python /home/ammon/Documents/Scripts/FishTrack/src/overlay_track.py -i {input.video} -t {input.track} -o snake/results/overlays/{wildcards.video}.overlay.big.mp4 2>> {params.log};"
-        "ffmpeg -i snake/results/overlays/{wildcards.video}.overlay.big.mp4 -t 120 snake/results/overlays/{wildcards.video}.overlay.mp4 -y 2>> {params.log};"
+        "ffmpeg -i snake/results/overlays/{wildcards.video}.overlay.big.mp4 -t 1800 snake/results/overlays/{wildcards.video}.overlay.mp4 -y 2>> {params.log};"
         "rm snake/results/overlays/{wildcards.video}.overlay.big.mp4 2>> {params.log};"

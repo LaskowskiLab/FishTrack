@@ -1,11 +1,11 @@
 
-bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "Hi there, me again, I'm performing my daily Snake pipeline check"
+bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "Hi there, me again, I'm performing my daily Snake pipeline check for $HOSTNAME"
 
 echo ""
 
 snake_dir="/home/ammon/Documents/Scripts/FishTrack/src/snake_pipelines"
-total_files=$(cat $snake_dir/path_lists/jay.babies.paths.fours2.csv | wc -l)
-finished_files=$(ls "$snake_dir"/snake/results/csv | wc -l)
+total_files=$(cat $snake_dir/path_lists/jay.sailfins.paths.txt | wc -l)
+finished_files=$(ls "$snake_dir"/snake/results/csv | grep 2024 |  wc -l)
 
 tmp_path="/home/ammon/Documents/Scripts/FishTrack/src/tmp_snake.txt"
 pgrep snakemake > $tmp_path
