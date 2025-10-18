@@ -13,6 +13,10 @@
 ## Check for a variety of errors and upload to box
 5 6-18 * * * bash /home/pi/recording/mobileSrc/box_checkin.sh
 
+## End any remaining recordings
+30 19 * * * bash /home/pi/recording/mobileSrc/stopCam.sh >> /home/pi/record    ing/cronlog.log 2>&1
+45 19 * * * pkill rpicam
+
 ## Upload video (this also deletes the video from the pi)
 0 20 * * * bash /home/pi/recording/mobileSrc/sync_vids.sh >> /home/pi/recording/cronlog.log 2>&1
 

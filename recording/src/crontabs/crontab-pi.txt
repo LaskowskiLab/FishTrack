@@ -14,7 +14,8 @@
 0 6 * * * bash /home/pi/recording/src/run_vid.sh >> /home/pi/recording/cronlog.log 2>&1
 
 ## Upon reboot, check if it should be recording and respond accordingly
-@reboot bash /home/pi/recording/src/check_reboot.sh
+@reboot expr $(cat /home/pi/recording/restart_count.txt) + 1 > /home/pi/recording/restart_count.txt
+@reboot sleep 5 && bash /home/pi/recording/src/check_reboot.sh
 @reboot sleep 300 && bash /home/pi/recording/src/notify_reboot.sh
 
 ## Stop the video
@@ -25,7 +26,7 @@
 
 ## Reboot every sunday after recordings are done
 ## you need to make sure the pi is configured to run reboot without passwd
-35 18 * * SUN sudo /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
+01 19 * * SUN sudo /sbin/reboot >> /home/pi/recording/cronlog.log 2>&1
 
 ## Delete cronlog.log every month
 34 18 1 * * date > /home/pi/recording/cronlog.log

@@ -29,6 +29,7 @@ def build_parse():
 
 def build_dict(input_tsv):
     data_dict = {}
+    #import pdb;pdb.set_trace()
     data_df = pd.read_table(input_tsv)
     pis = data_df.pi.unique()
     for p in pis:

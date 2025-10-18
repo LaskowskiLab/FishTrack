@@ -112,6 +112,7 @@ def simply_flatten(locations,track_occupancy = None,instance_scores=None,stds=3,
 
     return single_track,single_occupancy 
 
+## This finds single detections where adjacent frames are null and deletes them
 def clear_lone_points(a):
     a = np.array(a)
     y = np.array(a[1:-1])

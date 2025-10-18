@@ -19,6 +19,8 @@ def build_parse():
     parser.add_argument('--output','-o',required=False,help='Path to output video')
     parser.add_argument('--other_track','-b',required=False,help='Second array of tracks to plot, very niche')
     parser.add_argument('--third_track','-c',required=False,help='Third array of tracks to plot, even more niche')
+    parser.add_argument('--fps','-f',required=False,help='Speed to playback video, defaults to max possible')
+    parser.add_argument('--start_seconds','-ss',required=False,help='First frame to start processing')
     return parser.parse_args()
 
 ## Take an array and clean out single points, then interpolate
@@ -54,13 +56,16 @@ if args.output is None:
 out_file = args.output
 #out_file = vid_name.replace('.mp4','.tracked.mp4')
 
-if '.h5' in args.vid_file:
+if '.h5' in args.tracks:
     with h5py.File(args.tracks, 'r') as f:
         dset_names = list(f.keys())
         locations = f['tracks'][:].T
         node_names = [n.decode() for n in f["node_names"][:]]
         track_occupancy = f['track_occupancy'][:].T
-    a = locations ## Really not sure if that works...
+    #a = locations ## Really not sure if that works...
+    a = locations[:,4,:,0]
+    #a = np.moveaxis(a,2,1)
+    #import pdb;pdb.set_trace()
 
 elif '.npy' in args.tracks:
     a = np.load(args.tracks)
@@ -68,15 +73,38 @@ elif '.npy' in args.tracks:
 #print(a.shape)
 
 if args.other_track is not None:
-    b = np.load(args.other_track)
+    if '.h5' in args.other_track:
+        with h5py.File(args.other_track, 'r') as f:
+            dset_names = list(f.keys())
+            locations = f['tracks'][:].T
+            node_names = [n.decode() for n in f["node_names"][:]]
+            track_occupancy = f['track_occupancy'][:].T
+        #a = locations ## Really not sure if that works...
+        b = locations[:,0,:,0] ## this is actually fish specific
+    else:
+        b = np.load(args.other_track)
 else:
     b = None
 
 if args.third_track is not None:
-    c = np.load(args.third_track)
+    if '.h5' in args.third_track:
+        with h5py.File(args.third_track, 'r') as f:
+            dset_names = list(f.keys())
+            locations = f['tracks'][:].T
+            node_names = [n.decode() for n in f["node_names"][:]]
+            track_occupancy = f['track_occupancy'][:].T
+        #a = locations ## Really not sure if that works...
+        c = locations[:,4,:,0]
+    else:
+        c = np.load(args.third_track)
 else:
     c = None
 ## Clean up and interpolate tracks
+
+if args.fps is not None:
+    wait_time = int(1000 / float(args.fps))
+else:
+    wait_time = 1
 
 ## Probably need a c here too
 if b is not None:
@@ -125,6 +153,11 @@ tail_length = 10
 t=0
 print('Working on it...')
 
+if args.start_seconds is not None:
+    frame_number = int(args.start_seconds)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number-1)
+    t = frame_number - 1
+
 while(cap.isOpened()):
     ret, frame = cap.read()
     rad = 5
@@ -140,15 +173,17 @@ while(cap.isOpened()):
 
         for l in range(0,min(t,tail_length)):
             r = max(2,rad-l)
-            cv2.circle(frame,(a[f,t-l,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1)
+            cv2.circle(frame,(a[f,t-l,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1) ## Quad
         if b is not None:
-            cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,255,0],thickness=-1)
+            cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,255,0],thickness=-1) ## Green
         if c is not None:
-            cv2.circle(frame,(c[f,t,0],c[f,t,1]),radius=rad-1,color=[255,0,0],thickness=-1)
+            cv2.circle(frame,(c[f,t,0],c[f,t,1]),radius=rad-1,color=[255,0,0],thickness=-1) ## Blue
     if args.visualize:
         cv2.imshow('Overlay',frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(wait_time) & 0xFF == ord('q'):
             args.visualize = False
+            if args.dump:
+                break
 
     if not args.dump:
         out.write(frame)
