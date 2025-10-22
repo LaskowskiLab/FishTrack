@@ -5,6 +5,9 @@ For questions contact Ammon Perkes (perkes.ammon@gmail.com)
 ## Installation
 First, it's important to note that this code is written first and foremost for our lab. If you're applying this, you will need to make some changes before you just plug and play, especially anywhere that rclone is called.
 
+Note, there is also a lot of code in the FishTrack/src repo that helps the pi's. You can find this in https://github.com/LaskowskiLab/FishTrack/tree/main/src/monitoring_scripts 
+These scripts are scheduled to run on a separate desktop 
+
 # Setting up a pi
 This assumes you have already configured your rclone token.
 
