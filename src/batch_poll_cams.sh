@@ -3,7 +3,7 @@ rm ~/Documents/Scripts/FishTrack/recording/now/*.jpg
 
 for i in $(cat $1); do
 ssh -o StrictHostKeyChecking=no $i << EOF
-    raspistill -o ~/recording/cam_check.jpg
+    rpicam-still --autofocus-mode manual --lens-position 2.8 -o ~/recording/cam_check.jpg
     exit
 EOF
 

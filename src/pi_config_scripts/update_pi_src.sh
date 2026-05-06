@@ -6,6 +6,7 @@ for i in $(cat $1); do
 echo $i
 ssh -o StrictHostKeyChecking=no $i << EOF
     rclone copy AmazonBox:mobileSrc ~/recording/mobileSrc
+    cp ~/recording/mobileSrc/configs/default.config ~/recording/current.config
     cp ~/recording/mobileSrc/mobile_aliases.txt ~/.bash_aliases
     cp ~/recording/mobileSrc/readme.txt ~/recording
     exit

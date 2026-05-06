@@ -11,7 +11,7 @@ echo $space
 percentage="${space%\% /}"
 percentage="${percentage##* }"
 echo $percentage
-if [ $percentage -gt "80" ]; then
+if [ $percentage -gt "95" ]; then
     echo getting full
     bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "**Warning** $i at $percentage %"
 else

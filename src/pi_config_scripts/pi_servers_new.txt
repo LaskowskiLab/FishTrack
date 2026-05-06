@@ -1,0 +1,7 @@
+pi@v01.local
+pi@v02.local
+pi@v03.local
+pi@v04.local
+pi@v05.local
+pi@v06.local
+pi@v07.local

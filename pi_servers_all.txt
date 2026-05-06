@@ -22,3 +22,6 @@ pi@raspberrypi21.local
 pi@raspberrypi22.local
 pi@raspberrypi23.local
 pi@raspberrypi24.local
+pi@v08.local
+pi@v10.local
+pi@v12.local
