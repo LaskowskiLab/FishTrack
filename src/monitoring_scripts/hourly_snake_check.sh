@@ -17,7 +17,7 @@ space="$(df -hk /)"
 percentage="${space%\% /}"
 percentage="${percentage##* }"
 
-if [ $percentage -gt "80" ]; then
-    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "**Warning** Compy is at $percentage %"
+if [ $percentage -gt "85" ]; then
+    bash /home/ammon/Documents/Scripts/FishTrack/src/send_mail.sh "**Warning** Ammon's Compy is at $percentage %"
 fi
 
