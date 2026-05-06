@@ -21,19 +21,27 @@ def build_parse():
     parser.add_argument('--third_track','-c',required=False,help='Third array of tracks to plot, even more niche')
     parser.add_argument('--fps','-f',required=False,help='Speed to playback video, defaults to max possible')
     parser.add_argument('--start_seconds','-ss',required=False,help='First frame to start processing')
+    parser.add_argument('--n_frames','-n',required=False,help='Number of frames to write, defaults to end of video')
+    parser.add_argument('--tail_length','-l',required=False,help='Length of tail of dots, defaults to 10')
+    parser.add_argument('--stat_csv','-sc',required=False,help='csv with stat information to overlay, if included it will overlay statistics')
+    parser.add_argument('--open_circle','-oc',required=False,action='store_true',help='option to use open circle rather than closed')
+    parser.add_argument('--interpolate','-interp',required=False,action='store_true',help='option to interpolate')
     return parser.parse_args()
 
 ## Take an array and clean out single points, then interpolate
-def clean_track(a):
+def clean_track(a,clean=False):
 
-    a = parse_sleap.clear_peaks(a)
-    clean_xs = parse_sleap.clear_lone_points(a[:,0])
-    clean_ys = parse_sleap.clear_lone_points(a[:,1])
-    b = np.empty_like(a)
-    b[:,0] = clean_xs
-    b[:,1] = clean_ys
-    b = parse_sleap.clear_teleports(b)
+    if clean:
+        a = parse_sleap.clear_peaks(a)
+        clean_xs = parse_sleap.clear_lone_points(a[:,0])
+        clean_ys = parse_sleap.clear_lone_points(a[:,1])
+        b = np.empty_like(a)
+        b[:,0] = clean_xs
+        b[:,1] = clean_ys
+        b = parse_sleap.clear_teleports(b)
 
+    else:
+        b = np.array(a)
     smooth_b = np.empty_like(b)
     smooth_b[:,0] = parse_sleap.interp_track(b[:,0])
     smooth_b[:,1] = parse_sleap.interp_track(b[:,1])
@@ -56,6 +64,8 @@ if args.output is None:
 out_file = args.output
 #out_file = vid_name.replace('.mp4','.tracked.mp4')
 
+## Appropriate shape is fish,frame,(x,y)
+## H5 shape is (frames,nodes,x/y,track)
 if '.h5' in args.tracks:
     with h5py.File(args.tracks, 'r') as f:
         dset_names = list(f.keys())
@@ -64,6 +74,9 @@ if '.h5' in args.tracks:
         track_occupancy = f['track_occupancy'][:].T
     #a = locations ## Really not sure if that works...
     a = locations[:,4,:,0]
+    #a = locations[:,5,:]
+    #a = np.moveaxis(a,2,0)
+    #import pdb;pdb.set_trace()
     #a = np.moveaxis(a,2,1)
     #import pdb;pdb.set_trace()
 
@@ -129,10 +142,10 @@ else:
     if len(a.shape) == 4:
         a = np.nanmean(a,axis=2)
 
-if n_fish > 1:
+a_ = np.array(a)
+if args.interpolate:
     for f in range(n_fish):
-        #a[f] = clean_track(a[f])
-        pass
+        a[f] = clean_track(a[f])
 
 a = a.astype(int)
 ## Make video:
@@ -145,10 +158,17 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 a = np.clip(a,0,max(frame_width,frame_height))
 
 if not args.dump:
-    out = cv2.VideoWriter(args.output,fourcc,fps, (frame_width,frame_height),isColor=True)
+    if args.fps is not None:
+        out_fps = float(args.fps)
+    else:
+        out_fps = fps
+    out = cv2.VideoWriter(args.output,fourcc,out_fps, (frame_width,frame_height),isColor=True)
 
 fish_colors = [(0,0,255),(255,255,0),(0,255,255),(255,0,255)]
-tail_length = 10
+if args.tail_length is None:
+    tail_length = 10
+else:
+    tail_length = int(args.tail_length)
 
 t=0
 print('Working on it...')
@@ -158,9 +178,15 @@ if args.start_seconds is not None:
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number-1)
     t = frame_number - 1
 
-while(cap.isOpened()):
+if args.n_frames is not None:
+    max_frames = int(args.n_frames)
+else:
+    max_frames = np.inf
+count = 0
+while cap.isOpened() and count < max_frames:
+    count += 1
     ret, frame = cap.read()
-    rad = 5
+    rad = 10 
     if not ret:
         break
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
@@ -169,15 +195,26 @@ while(cap.isOpened()):
         if np.isnan(a[f,t,0]) or np.isnan(a[f,t,0]):
             continue
         cor = fish_colors[f]
-        cv2.circle(frame,(a[f,t,0],a[f,t,1]),radius=rad,color=cor,thickness=-1)
+        if np.isnan(a_[f,t,0]):
+            cor = (0,0,0)
+        if args.open_circle:
+            thickness = 2
+        else:
+            thickness = -1
+        cv2.circle(frame,(a[f,t,0],a[f,t,1]),radius=rad,color=cor,thickness=thickness)
 
+        #import pdb;pdb.set_trace()
         for l in range(0,min(t,tail_length)):
-            r = max(2,rad-l)
-            cv2.circle(frame,(a[f,t-l,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1) ## Quad
+            r = max(2,int(rad/2)-l)
+            cv2.circle(frame,(a[f,t-l-1,0],a[f,t-l,1]),radius=r,color=cor,thickness=-1) ## Quad
         if b is not None:
             cv2.circle(frame,(b[f,t,0],b[f,t,1]),radius=rad-1,color=[0,255,0],thickness=-1) ## Green
         if c is not None:
             cv2.circle(frame,(c[f,t,0],c[f,t,1]),radius=rad-1,color=[255,0,0],thickness=-1) ## Blue
+    #if args.stat_csv is not None:
+    #    stat_list = parse_stats(f,t)
+    #    for s in stat_list:
+    #        pass
     if args.visualize:
         cv2.imshow('Overlay',frame)
         if cv2.waitKey(wait_time) & 0xFF == ord('q'):

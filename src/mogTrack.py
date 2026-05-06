@@ -73,7 +73,7 @@ def crop_contours(frame,contours,idx=0):
         (bottomy, bottomx) = (np.max(y), np.max(x))
         out = out[topy:bottomy+1, topx:bottomx+1]
         if VIZ:
-            cv2.imshow('Output',out)
+            #cv2.imshow('Output',out)
             cv2.waitKey(1)
         if SAVE:
             f_name = './crops/crop.' + str(idx).zfill(7) + '.' + str(c_).zfill(3) + '.png'
@@ -83,7 +83,8 @@ def crop_contours(frame,contours,idx=0):
 def make_spots(input_video,output_video,write_video=True):
     cap = cv2.VideoCapture(input_video)
     #bg_subtractor = cv2.bgsegm.createBackgroundSubtractorMOG()
-    bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+    #bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+    bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False,history = 10)
     if input_video is not 0:
         n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = int(cap.get(cv2.CAP_PROP_FPS))

@@ -9,9 +9,26 @@ def count_open(track,center_point):
     clean_track = track[~np.isnan(track[:,0])]
     xs = np.abs(clean_track[:,0] - center_point[0]) > 100
     ys = np.abs(clean_track[:,1] - center_point[1]) > 200
-    courage_count = np.sum(np.logical_and(xs,ys))
-    courage_ratio = courage_count / len(clean_track)
-    return courage_count,courage_ratio
+    filter_count = np.sum(np.logical_and(xs,ys))
+    filter_ratio = filter_count / len(clean_track)
+    return filter_count,filter_ratio
+
+def count_open2(track,center_point):
+    clean_track = track[~np.isnan(track[:,0])]
+## These are time in the corners
+    xs = np.abs(clean_track[:,0] - center_point[0]) > 100
+    ys = np.abs(clean_track[:,1] - center_point[1]) > 200
+    xs_small = np.abs(clean_track[:,0] - center_point[0]) > 175
+    ys_small = np.abs(clean_track[:,1] - center_point[1]) > 250
+    xs_wall_in = np.abs(clean_track[:,0] - center_point[0]) < 50 
+    ys_wall_in = np.abs(clean_track[:,1] - center_point[1]) < 50 
+    xs_wall_out = np.abs(clean_track[:,0] - center_point[0]) > 400 
+    ys_wall_out = np.abs(clean_track[:,1] - center_point[1]) > 300 
+    filter_count = np.sum(np.logical_and(xs,ys))
+    filter_count_small = np.sum(np.logical_and(xs_small,ys_small))
+    off_wall_count = np.sum(np.logical_or(np.logical_or(xs_wall_in,ys_wall_in),np.logical_or(xs_wall_out,ys_wall_out)))
+    courage_ratio = (off_wall_count-filter_count) / len(clean_track)
+    return filter_count,courage_ratio,off_wall_count,filter_count_small
 
 def build_parse():
     parser = argparse.ArgumentParser(description='Required and additional inputs')
@@ -23,14 +40,19 @@ def build_parse():
     parser.add_argument('--quadrants','-q',required=False,help='List of quadrants (left to right, top down) where fish are, i.e. [0,1,3]')
     parser.add_argument('--png','-s',action='store_true',help='If included, saves a png scatter plot')
     parser.add_argument('--dump','-d',action='store_true',help='Debug option to prevent saving output')
+    parser.add_argument('--header','-l',action='store_true',help='Option to save the header to the projectCSV')
     parser.add_argument('--project_csv','-p',required=False,help='Path to a project csv where all the summary statistics will be written')
     parser.add_argument('--video_key','-k',required=False,help='Path to tsv containing the identity of the fish')
+    parser.add_argument('--interpolate','-interp',required=False,action='store_true',help='option to interpolate tracks')
+    parser.add_argument('--walls','-w',required=False,action='store_true',help='option to interpolate tracks')
     return parser.parse_args()
 
 def build_dict(input_tsv):
     data_dict = {}
-    #import pdb;pdb.set_trace()
-    data_df = pd.read_table(input_tsv)
+    if 'tsv' in input_tsv:
+        data_df = pd.read_table(input_tsv)
+    elif 'csv' in input_tsv:
+        data_df = pd.read_csv(input_tsv)
     pis = data_df.pi.unique()
     for p in pis:
         sub_dict = {}
@@ -73,14 +95,16 @@ if __name__ == "__main__":
 
     track = np.load(track_file)
 ## We have the option of interpolation, but it's rarely good in tracking tanks.
-    """
-    track_interpolated = np.empty_like(track)
-    for n in range(4):
-        track_interpolated[n,:,0] = interp_track(track[n,:,0])
-        track_interpolated[n,:,1] = interp_track(track[n,:,1])
-    np.save('test_interp.npy',track_interpolated)
-    """
-    
+    if args.interpolate:
+        track_interpolated = np.empty_like(track)
+        for n in range(4):
+            track_interpolated[n,:,0] = interp_track(track[n,:,0])
+            track_interpolated[n,:,1] = interp_track(track[n,:,1])
+
+        track_ = np.array(track) ## Save original for visibility
+        track = track_interpolated
+    else:
+        track_ = track
     #CENTER = [375,486]
     CENTER = [440,515]
     if args.center_list == None:
@@ -125,7 +149,10 @@ if __name__ == "__main__":
     std_velocity_array = np.full([n_fish,n_bins],np.nan)
     activity_array = np.full([n_fish,n_bins],np.nan)
     corner_array = np.full([n_fish,n_bins],np.nan)
+    corner_array_small = np.full([n_fish,n_bins],np.nan)
+    wall_array = np.full([n_fish,n_bins],np.nan)
     hiding_array = np.full([n_fish,n_bins],np.nan)
+    hiding_array_small = np.full([n_fish,n_bins],np.nan)
 
     medianVels = [np.nan for f in range(n_fish)]
     stdVels = [np.nan for f in range(n_fish)]
@@ -138,10 +165,20 @@ if __name__ == "__main__":
                 'MeanVisibility_','MeanActivity_','MeanBoldness_',
                 'MeanVel_','StdVel_','MedianVel_',
                 'Treatments','PropHiding','PropHiding_',
-                'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_']
+                'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_','PropWall','PropWall_','PropCorner','PropCorner_',
+                'MeanBoldnessSmall','meanBoldnessSmall_','PropCornerSmall','PropCornerSmall_','PropHidingSmall','PropHidingSmall_']
+
+    """ old columns:
+    columns = ['Video','FishID','Quadrant','Bin','Date','ExpDay','YearDay',
+                'MeanVisibility','MeanActivity','MeanBoldness','MeanVel','StdVel','MedianVel',
+                'MeanVisibility_','MeanActivity_','MeanBoldness_',
+                'MeanVel_','StdVel_','MedianVel_',
+                'Treatments','PropHiding','PropHiding_',
+                'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_','PropWall','PropWall_','PropCorner','PropCorner_']
+    """
 
     fish_ids = [None for f in range(4)]
-    delta = np.inf
+    #delta = np.inf
     fish_deltas = [np.nan for f in range(4)]
     date_str = np.nan
     year_day = np.nan
@@ -153,7 +190,12 @@ if __name__ == "__main__":
     fish_treatments = [np.nan for n in range(4)]
     if args.video_key is not None:
         data_dict = build_dict(args.video_key)
-        if piID in data_dict.keys():
+        piID_int = int(piID[2:])
+        if piID in data_dict.keys() or piID_int in data_dict.keys():
+            if piID_int in data_dict.keys():
+                piID_ = piID_int
+            else:
+                piID_ = piID
             fish_deltas = [np.nan for n in range(4)]
             fish_treatments = [np.nan for n in range(4)]
 
@@ -161,28 +203,33 @@ if __name__ == "__main__":
             YYYY,MM,DD = date
             date_str = '/'.join([YYYY,MM,DD])
             file_date = datetime.strptime(date_str, '%Y/%m/%d')
-            pi_dict = data_dict[piID]
+            pi_dict = data_dict[piID_]
             n_possible_vids = len(pi_dict['start'])
             year_day = file_date.timetuple().tm_yday
-            delta_days = 500 
+            #delta_days = 500 
+            delta_min = np.inf
             for m in range(n_possible_vids):
                 start_date = datetime.strptime(pi_dict['start'][m], '%m/%d/%y')
                 end_date = datetime.strptime(pi_dict['end'][m], '%m/%d/%y')
                 
-                if file_date < start_date:
+                if file_date < start_date or file_date > end_date:
                     continue
                 delta_m = file_date - start_date
-                delta = delta_days
+                #delta = delta_days
                 #fish_ids = pi_dict['IDs'][m]
                 occupied_cells = pi_dict['OccupiedCells'][m]
                 occupied_cells = [int(o) for o in occupied_cells]
 ## There are some cases where the video has different aged fish in different cells
-                for o in range(4):
+                #for o in range(4):
+                for o in occupied_cells:
 ## need to get this right for every fish...
-                    if np.isnan(fish_deltas[o]) or delta_m.days < fish_deltas[o]:
-                        fish_treatments[o] = pi_dict['Treatments'][m][o]
+                    if np.isnan(fish_deltas[o]) or delta_m.days <= fish_deltas[o]:
+## prioritize IDs over values for when the days are the same
+                        #if (fish_ids[o] != 'none') and (pi_dict['IDs'][m][o] == 'none'):
+                        #    continue
+                        fish_treatments[o] = pi_dict['Treatments'][m][o].strip()
                         fish_deltas[o] = delta_m.days
-                        fish_ids[o] = pi_dict['IDs'][m][o]
+                        fish_ids[o] = pi_dict['IDs'][m][o].strip()
                         if fish_ids[0] == 'n/a':
                             fish_ids[0] = None 
                     else:
@@ -201,7 +248,8 @@ if __name__ == "__main__":
 
     for f in range(4): ## defined above
         sub_track = track[f]
-        sub_diff = np.diff(sub_track,axis=0,prepend=0)
+        sub_track_ = track_[f] ## This is for optional interpolation
+        sub_diff = np.diff(sub_track_,axis=0,prepend=0)
         velocity = np.linalg.norm(sub_diff,axis=1)
         
         active_velocity = np.array(velocity)
@@ -213,7 +261,7 @@ if __name__ == "__main__":
         medianActiveVels[f] = np.nanmedian(active_velocity)
         stdActiveVels[f] = np.nanstd(active_velocity)
 
-        visibility = ~np.isnan(sub_track[:,0])
+        visibility = ~np.isnan(sub_track_[:,0])
 
         for i in range(n_bins):
             i0 = i * bin_size
@@ -232,7 +280,12 @@ if __name__ == "__main__":
 
             sub_velocity_active = active_velocity[i0:i1] ## Active velocity is defined up above, everywhere vel > 5
 
-            courage_count,courage_ratio = count_open(track_bin,center_point)
+            if args.walls:
+                filter_count,courage_ratio,wall_count,filter_count_small = count_open2(track_bin,center_point)
+            else:
+                filter_count,filter_ratio = count_open(track_bin,center_point)
+                filter_count_small = 0 
+                wall_count = 0
             visibility_array[f,i] = sub_vis
             median_velocity_array[f,i] = sub_vel
             mean_velocity_array[f,i] = np.nanmean(sub_velocity)
@@ -242,8 +295,15 @@ if __name__ == "__main__":
             median_active_velocity_array[f,i] = np.nanmedian(sub_velocity_active)
             std_active_velocity_array[f,i] = np.nanstd(sub_velocity_active)
 
-            hiding_array[f,i] = courage_count / bin_size + sub_vis
-            corner_array[f,i] = courage_ratio
+            if args.interpolate:
+                hiding_array[f,i] = (filter_count + wall_count) / bin_size 
+                hiding_array_small[f,i] = (filter_count_small + wall_count) / bin_size 
+            else:
+                hiding_array[f,i] = (filter_count + wall_count) / bin_size + sub_vis
+                hiding_array_small[f,i] = (filter_count_small + wall_count) / bin_size + sub_vis
+            wall_array[f,i] = wall_count / bin_size
+            corner_array[f,i] = filter_count / bin_size
+            corner_array_small[f,i] = filter_count_small / bin_size
             activity_array[f,i] = sub_active
 
     if args.project_csv is not None:
@@ -262,6 +322,9 @@ if __name__ == "__main__":
         header = delim.join(columns)
         if not args.dump:
             out_f.write(header + '\n')
+## Add header to project file if you want
+            if args.header:
+                project_f.write(header + '\n')
         for f in range(4):
             fish_id = fish_ids[f]
             meanVis = str(np.round(np.nanmean(visibility_array[f]),3))
@@ -281,8 +344,16 @@ if __name__ == "__main__":
             meanBold = str(np.round(np.nanmean(corner_array[f]),3))
             stdBold = str(np.round(np.nanstd(corner_array[f]),3))
 
+            meanBoldSmall = str(np.round(np.nanmean(corner_array_small[f]),3))
+            stdBoldSmall = str(np.round(np.nanstd(corner_array_small[f]),3))
             treatment = str(fish_treatments[f])
             propHiding = str(np.round(np.nanmean(hiding_array[f]),3))
+            propHidingSmall = str(np.round(np.nanmean(hiding_array_small[f]),3))
+
+            propWall = str(np.round(np.nanmean(wall_array[f]),3))
+            propCorner = str(np.round(np.nanmean(corner_array[f]),3))
+            propCornerSmall = str(np.round(np.nanmean(corner_array_small[f]),3))
+
             for i in range(n_bins):
                 meanVis_ = str(np.round(visibility_array[f,i],3))
 
@@ -296,21 +367,28 @@ if __name__ == "__main__":
 
                 meanAct_ = str(np.round(activity_array[f,i],3))
                 meanBold_ = str(np.round(corner_array[f,i],3))
+                meanBoldSmall_ = str(np.round(corner_array_small[f,i],3))
 
                 propHiding_ = str(np.round(hiding_array[f,i],3))
+                propHidingSmall_ = str(np.round(hiding_array_small[f,i],3))
+                propWall_ = str(np.round(wall_array[f,i],3))
+                propCorner_ = str(np.round(corner_array[f,i],3))
+                propCornerSmall_ = str(np.round(corner_array_small[f,i],3))
 
                 f_line = delim.join([vid_name,str(fish_id),str(f),str(i),str(date_str),str(fish_deltas[f]),str(year_day),
                             meanVis,meanAct,meanBold,meanVel,stdVel,medianVel,
                             meanVis_,meanAct_,meanBold_,meanVel_,stdVel_,medianVel_,
                             treatment,propHiding,propHiding_,
-                            meanActiveVel,stdActiveVel,medianActiveVel,meanActiveVel_,stdActiveVel_,medianActiveVel_])
+                            meanActiveVel,stdActiveVel,medianActiveVel,meanActiveVel_,stdActiveVel_,medianActiveVel_,propWall,propWall_,propCorner,propCorner_,meanBoldSmall,meanBoldSmall_,propCornerSmall,propCornerSmall_,propHidingSmall,propHidingSmall_])
                 """ # Reminder:
-                columns = ['Video','FishID','Quadrant','Bin','Date','ExpDay','YearDay',
-                            'MeanVisibility','MeanActivity','MeanBoldness','MeanVel','StdVel','MedianVel',
-                            'MeanVisibility_','MeanActivity_','MeanBoldness_',
-                            'MeanVel_','StdVel_','MedianVel_',
-                            'Treatments','PropHiding','PropHiding_',
-                            'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_']
+    columns = ['Video','FishID','Quadrant','Bin','Date','ExpDay','YearDay',
+                'MeanVisibility','MeanActivity','MeanBoldness','MeanVel','StdVel','MedianVel',
+                'MeanVisibility_','MeanActivity_','MeanBoldness_',
+                'MeanVel_','StdVel_','MedianVel_',
+                'Treatments','PropHiding','PropHiding_',
+                'MeanActiveVel','StdActiveVel','MedianActiveVel','MeanActiveVel_','StdActiveVel_','MedianActiveVel_','PropWall','PropWall_','PropCorner','PropCorner_',
+                MeanBoldnessSmall,meanBoldnessSmall_,PropCornerSmall,PropCornerSmall_,PropHidingSmall,PropHidingSmall_]
+
                 """
 
                 if not args.dump:

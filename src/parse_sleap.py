@@ -3,7 +3,6 @@
 ## Code to process the .npz readouts from Trex
 ## written by Ammon for use in the Laskowski Lab, for questions contact perkes.ammon@gmail.com
 
-import h5py
 import numpy as np
 import argparse
 from matplotlib import pyplot as plt
@@ -21,6 +20,7 @@ def build_parse():
     return parser.parse_args()
 
 def read_h5(h5_file):
+    import h5py
     with h5py.File(h5_file,'r') as f:
         locations = f['tracks'][:].T
         track_occupancy = f['track_occupancy'][:].T
@@ -93,7 +93,7 @@ def clean_track(locations,track_occupancy = None,instance_scores=None,stds=3,min
     full_track[:,1] = interp_track(clean_track[:,1])
     return full_track,clean_occupancy
 
-def simply_flatten(locations,track_occupancy = None,instance_scores=None,stds=3,min_track=2):
+def simply_flatten(locations,track_occupancy = None,instance_scores=None,stds=3,min_track=2,peaks=True):
     all_tracks = np.array(locations)
     track_occupancy = np.array(track_occupancy)
     if len(np.shape(all_tracks)) == 4:
@@ -105,9 +105,10 @@ def simply_flatten(locations,track_occupancy = None,instance_scores=None,stds=3,
         track_occupancy = (1- np.isnan(all_tracks[:,0]).T).astype(bool)
     else:
         track_occupancy = np.array(track_occupancy)
-
-    trimmed_tracks,track_occupancy_trim = clear_peaks_all(all_tracks,track_occupancy,plot_me=False,stds=stds)
-
+    if peaks:
+        trimmed_tracks,track_occupancy_trim = clear_peaks_all(all_tracks,track_occupancy,plot_me=False,stds=stds)
+    else:
+        trimmed_tracks = all_tracks
     single_track,single_occupancy = overlay_tracks(trimmed_tracks,track_occupancy_trim,instance_scores,min_track=min_track)
 
     return single_track,single_occupancy 
@@ -229,6 +230,7 @@ def overlay_tracks(a,track_occupancy=None,instance_scores = None,min_track = 2):
         if True in overlapping_frames and instance_scores is not None:
             ## We can pick the best frames: 
             frames_to_check = np.argwhere((sum_occupancy > 1) & (frames == 1))[:,0]
+            print('overlap:',len(frames_to_check),len(instance_scores))
             for f in frames_to_check:
                 t_score = instance_scores[f,t]
                 competitors = np.argwhere(track_occupancy[:,f])[:,0]
@@ -260,8 +262,11 @@ def nan_helper(y):
     return np.isnan(y), lambda z: z.nonzero()[0]
 
 def interp_track(a):
+    #import pdb;pdb.set_trace()
     y = np.array(a)
     nans,x = nan_helper(a)
+    if sum(~nans) == 0:
+        return y
     y[nans]=np.interp(x(nans),x(~nans),y[~nans])
     return y
 
