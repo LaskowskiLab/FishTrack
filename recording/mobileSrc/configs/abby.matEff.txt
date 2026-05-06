@@ -1,0 +1,17 @@
+fps=20
+width=1600
+height=1200
+hours=2
+minutes=0
+
+## This is a list of times (hhmm) separated by spaces that you want the pi to s>
+restart=0
+format=h264
+
+## If this is blank, it will use the last 4 characters of the name /pivideos/pi>
+### If you want to use the last 5 characters (e.g., JON03), set it
+## if you use "*" it will replace * with the last two characters (so JON* will >
+
+pi_name="JON*"
+
+project_suffix=abbyMatEff

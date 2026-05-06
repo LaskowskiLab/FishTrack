@@ -1,0 +1,19 @@
+fps=20
+width=2000
+height=700
+hours=0
+minutes=30
+
+# this line is for zombie pis, 0 means no auto restart
+restart=0
+
+# format of video
+format=mp4
+
+# pi name
+pi_name="V*"
+
+# project name
+project_suffix=kas.ch2.choice
+ 
+

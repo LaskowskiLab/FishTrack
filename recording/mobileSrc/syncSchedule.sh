@@ -27,7 +27,7 @@ elif [ "${config,,}" = "off" ]; then
     bash $srcDir"schedule_off.sh"
 elif [ -f $srcDir"configs/"$config ]; then 
     echo Found it! 
-    crontab $srcDir"base_cron.txt"
+    crontab $srcDir"crontabs/base_cron.txt"
     bash $srcDir"schedule_config.sh" $srcDir"configs/"$config
 else
     echo Count not find config
